@@ -1,0 +1,1 @@
+CREATE VOLUME IF NOT EXISTS vf_health.ghana.raw;

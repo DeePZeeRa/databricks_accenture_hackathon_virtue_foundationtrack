@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS bronze_raw_facilities (
   source_url STRING,
   name STRING,
   pk_unique_id STRING,
-  `mongo DB` STRING,
+  mongo_db STRING,
   specialties STRING,
   procedure STRING,
   equipment STRING,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS bronze_raw_facilities (
   ingested_at TIMESTAMP
 ) USING DELTA;
 
--- 2) Silver (clean canonical)
+-- 2) Silver
 CREATE TABLE IF NOT EXISTS silver_facilities_clean (
   row_id STRING,
   unique_id STRING,
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS gold_facility_claims (
   claim_id STRING,
   row_id STRING,
   unique_id STRING,
-  claim_type STRING,        -- procedure/equipment/capability
+  claim_type STRING,
   claim_text STRING,
   confidence DOUBLE,
   created_at TIMESTAMP
@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS gold_risk_signals (
   signal_id STRING,
   row_id STRING,
   unique_id STRING,
-  signal_type STRING,       -- anomaly/conflict/fraud
+  signal_type STRING,
   signal_score DOUBLE,
   signal_flag BOOLEAN,
   reason STRING,
