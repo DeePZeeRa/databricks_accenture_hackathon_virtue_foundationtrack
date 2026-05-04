@@ -1,0 +1,658 @@
+"""SQL query service — all structured data retrieval with caching."""
+from __future__ import annotations
+
+import json
+from typing import Any, Optional
+
+import structlog
+
+from app.core.database import DatabricksQueryExecutor
+from app.services.cache_service import CacheService
+
+logger = structlog.get_logger(__name__)
+
+CATALOG = "virtue_foundation.ghana"
+
+
+def _parse_json_col(val: Any, default: Any = None) -> Any:
+    """Safely parse a JSON string column."""
+    if default is None:
+        default = []
+    if val is None:
+        return default
+    if isinstance(val, list):
+        return val
+    if isinstance(val, str):
+        val = val.strip()
+        if not val or val in ("null", "None", "[]", "{}"):
+            return default
+        try:
+            return json.loads(val)
+        except (json.JSONDecodeError, ValueError):
+            return [val] if val else default
+    return default
+
+
+def _desert_color(score: float) -> str:
+    if score >= 0.75:
+        return "#B91C1C"
+    if score >= 0.55:
+        return "#EA580C"
+    if score >= 0.40:
+        return "#D97706"
+    if score >= 0.25:
+        return "#65A30D"
+    return "#2563EB"
+
+
+class SQLQueryService:
+    """All structured Databricks SQL queries with caching."""
+
+    # ── Facilities ─────────────────────────────────────────────────────────────
+
+    @staticmethod
+    async def get_facilities(
+        region: str = "",
+        facility_type: str = "",
+        search: str = "",
+        volunteer: bool = False,
+        has_emergency: Optional[bool] = None,
+        has_surgery: Optional[bool] = None,
+        has_icu: Optional[bool] = None,
+        has_obstetrics: Optional[bool] = None,
+        has_pediatrics: Optional[bool] = None,
+        has_radiology: Optional[bool] = None,
+        has_infectious_disease: Optional[bool] = None,
+        has_mental_health: Optional[bool] = None,
+        desert_label: str = "",
+        risk_level: str = "",
+        limit: int = 50,
+        offset: int = 0,
+        data_source_header: Optional[dict] = None,
+    ) -> dict:
+        cache_key = CacheService.build_key(
+            "facilities",
+            region, facility_type, search, volunteer,
+            has_emergency, has_surgery, has_icu,
+            has_obstetrics, has_pediatrics, has_radiology,
+            has_infectious_disease, has_mental_health,
+            desert_label, risk_level,
+            limit, offset,
+        )
+        cached = await CacheService.get(cache_key)
+        if cached:
+            if data_source_header is not None:
+                data_source_header["source"] = "cache"
+            return cached
+
+        where: list[str] = []
+        params: list = []
+
+        if region:
+            where.append("region_normalised = ?")
+            params.append(region)
+        if facility_type:
+            where.append("LOWER(facility_type_clean) = LOWER(?)")
+            params.append(facility_type)
+        if search:
+            where.append("LOWER(name) LIKE LOWER(?)")
+            params.append(f"%{search}%")
+        if volunteer:
+            where.append("accepts_volunteers_bool = true")
+        if has_emergency is True:
+            where.append("has_emergency_medicine = true")
+        if has_surgery is True:
+            where.append("has_surgery = true")
+        if has_icu is True:
+            where.append("has_icu = true")
+        if has_obstetrics is True:
+            where.append("has_obstetrics = true")
+        if has_pediatrics is True:
+            where.append("has_pediatrics = true")
+        if has_radiology is True:
+            where.append("has_radiology = true")
+        if has_infectious_disease is True:
+            where.append("has_infectious_disease = true")
+        if has_mental_health is True:
+            where.append("has_mental_health = true")
+        if desert_label:
+            where.append("desert_label = ?")
+            params.append(desert_label)
+
+        where_clause = f"WHERE {' AND '.join(where)}" if where else ""
+
+        count_sql = f"SELECT COUNT(*) AS total FROM {CATALOG}.gold_idp_enriched {where_clause}"
+        count_result = await DatabricksQueryExecutor.execute(count_sql, params, max_rows=1)
+        total = count_result[0]["total"] if count_result else 0
+
+        data_sql = f"""
+            SELECT unique_id, name, region_normalised, facility_type_clean, city_clean,
+                   organization_type_clean, latitude, longitude,
+                   number_doctors_int, capacity_int, data_completeness_score,
+                   medical_desert_score, desert_label,
+                   has_emergency_medicine, has_surgery, has_icu, has_obstetrics,
+                   has_pediatrics, has_radiology, has_infectious_disease, has_mental_health,
+                   is_hospital, is_clinic, is_ngo, is_public, is_private,
+                   accepts_volunteers_bool, email, officialWebsite as official_website,
+                   procedure_count, equipment_count, capability_count, specialty_count,
+                   total_stat_anomalies, capability_is_valid
+            FROM {CATALOG}.gold_idp_enriched
+            {where_clause}
+            ORDER BY data_completeness_score DESC NULLS LAST
+            LIMIT {limit} OFFSET {offset}
+        """
+        items = await DatabricksQueryExecutor.execute(data_sql, params, max_rows=limit)
+
+        result = {"total": total, "items": items}
+        await CacheService.set(cache_key, result, ttl=300)
+        if data_source_header is not None:
+            data_source_header["source"] = "databricks"
+        return result
+
+    @staticmethod
+    async def get_facility_detail(unique_id: str) -> Optional[dict]:
+        cache_key = CacheService.build_key("facility_detail", unique_id)
+        cached = await CacheService.get(cache_key)
+        if cached:
+            return cached
+
+        sql = f"""
+            SELECT
+                e.unique_id,
+                e.name,
+                e.region_normalised,
+                e.facility_type_clean,
+                e.city_clean,
+                e.address_line1,
+                e.address_line2,
+                e.address_line3,
+                e.address_city,
+                e.address_stateOrRegion AS address_state_or_region,
+                e.address_zipOrPostcode AS address_zip_or_postcode,
+                e.organization_type_clean,
+                e.latitude,
+                e.longitude,
+                e.number_doctors_int,
+                e.capacity_int,
+                e.data_completeness_score,
+                e.medical_desert_score,
+                e.desert_label,
+                e.has_emergency_medicine,
+                e.has_surgery,
+                e.has_icu,
+                e.has_obstetrics,
+                e.has_pediatrics,
+                e.has_radiology,
+                e.has_infectious_disease,
+                e.has_mental_health,
+                e.is_hospital,
+                e.is_clinic,
+                e.is_ngo,
+                e.is_public,
+                e.is_private,
+                e.accepts_volunteers_bool,
+                e.email,
+                e.phone_numbers,
+                e.official_phone,
+                e.officialWebsite AS official_website,
+                e.source_url,
+                e.description,
+                e.yearestablished AS year_established,
+                e.capability_is_valid,
+                e.capability_confidence,
+                e.capability_anomalies,
+                e.total_stat_anomalies,
+                e.procedure_count,
+                e.equipment_count,
+                e.capability_count,
+                e.specialty_count,
+                e.procedure_enriched,
+                e.equipment_enriched,
+                e.capability_enriched,
+                e.specialties_enriched,
+                e.idp_citations,
+                e.idp_run_id,
+                e._idp_processed,
+                a.total_anomaly_flags,
+                a.anomaly_risk_level,
+                a.llm_priority_action,
+                a.llm_data_quality_score,
+                a.llm_confirmed_anomaly_count,
+                a.llm_anomaly_severity,
+                a.llm_clinical_assessment,
+                a.llm_false_positive_reason,
+                a.stat_anomaly_capability_inflation,
+                a.stat_anomaly_hospital_no_doctors,
+                a.stat_anomaly_clinic_claims_icu,
+                a.stat_anomaly_ghost_facility,
+                a.stat_anomaly_specialty_mismatch,
+                a.stat_anomaly_procedure_breadth,
+                a.enhanced_type_capability_mismatch,
+                a.enhanced_ghost_hospital,
+                a.enhanced_procedures_no_equipment,
+                a.enhanced_low_idp_confidence,
+                a.enhanced_suspicious_completeness,
+                a.enhanced_icu_no_infrastructure
+            FROM {CATALOG}.gold_idp_enriched e
+            LEFT JOIN {CATALOG}.gold_anomaly_flags a ON e.unique_id = a.unique_id
+            WHERE e.unique_id = ?
+            LIMIT 1
+        """
+        rows = await DatabricksQueryExecutor.execute(sql, [unique_id], max_rows=1)
+        if not rows:
+            return None
+
+        row = rows[0]
+        # Parse JSON string columns
+        for col in [
+            "procedure_enriched",
+            "equipment_enriched",
+            "capability_enriched",
+            "specialties_enriched",
+            "capability_anomalies",
+            "phone_numbers",
+        ]:
+            row[col] = _parse_json_col(row.get(col))
+        for col in ["procedure_parsed", "equipment_parsed", "capability_parsed", "specialties_parsed"]:
+            row[col] = _parse_json_col(row.get(col))
+        row["idp_citations"] = _parse_json_col(row.get("idp_citations"))
+
+        await CacheService.set(cache_key, row, ttl=600)
+        return row
+
+    @staticmethod
+    async def get_facilities_map(
+        region: str = "",
+        facility_type: str = "",
+        desert_only: bool = False,
+        data_source_header: Optional[dict] = None,
+    ) -> dict:
+        cache_key = CacheService.build_key("map_v2", region, facility_type, desert_only)
+        cached = await CacheService.get(cache_key)
+        if cached:
+            if data_source_header is not None:
+                data_source_header["source"] = "cache"
+            return cached
+
+        where = [
+            "latitude IS NOT NULL",
+            "longitude IS NOT NULL",
+            "NOT (ABS(latitude - 7.9465) < 0.001 AND ABS(longitude - (-1.0232)) < 0.001)",
+        ]
+        params: list = []
+
+        if region:
+            where.append("region_normalised = ?")
+            params.append(region)
+        if facility_type:
+            where.append("LOWER(facility_type_clean) = LOWER(?)")
+            params.append(facility_type)
+        if desert_only:
+            where.append("desert_label IN ('Critical Desert', 'Severe Desert')")
+
+        where_clause = f"WHERE {' AND '.join(where)}"
+
+        sql = f"""
+            SELECT unique_id, name, facility_type_clean, city_clean, region_normalised,
+                   latitude, longitude, medical_desert_score, desert_label,
+                   has_emergency_medicine, has_surgery, has_icu, has_obstetrics,
+                   has_pediatrics, has_radiology, has_infectious_disease, has_mental_health,
+                     accepts_volunteers_bool, is_public, is_private, data_completeness_score,
+                   number_doctors_int, capacity_int, is_hospital, is_clinic, is_ngo,
+                   capability_is_valid, total_stat_anomalies,
+                   capability_confidence, specialties_enriched,idp_citations
+                   
+            FROM {CATALOG}.gold_idp_enriched
+            {where_clause}
+        """
+        rows = await DatabricksQueryExecutor.execute(sql, params, max_rows=2000)
+
+        features = []
+        for row in rows:
+            lat = row.get("latitude") or 0
+            lon = row.get("longitude") or 0
+            if not lat or not lon:
+                continue
+            score = float(row.get("medical_desert_score") or 0)
+            row["color"] = _desert_color(score)
+            row["specialties_enriched"] = _parse_json_col(row.get("specialties_enriched"))
+            row["idp_citations"] = _parse_json_col(row.get("idp_citations"))
+            features.append({
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [lon, lat]},
+                "properties": row,
+            })
+
+        geojson = {"type": "FeatureCollection", "features": features}
+        await CacheService.set(cache_key, geojson, ttl=600)
+        if data_source_header is not None:
+            data_source_header["source"] = "databricks"
+        return geojson
+
+    @staticmethod
+    async def get_stats(data_source_header: Optional[dict] = None) -> dict:
+        cache_key = "stats:dashboard"
+        cached = await CacheService.get(cache_key)
+        if cached:
+            if data_source_header is not None:
+                data_source_header["source"] = "cache"
+            return cached
+
+        import asyncio
+        results = await asyncio.gather(
+            DatabricksQueryExecutor.execute(
+                f"""SELECT COUNT(*) AS total_facilities,
+                    SUM(CASE WHEN is_hospital THEN 1 ELSE 0 END) AS hospitals,
+                    SUM(CASE WHEN is_clinic THEN 1 ELSE 0 END) AS clinics,
+                    SUM(CASE WHEN is_ngo THEN 1 ELSE 0 END) AS ngos,
+                    SUM(CASE WHEN accepts_volunteers_bool THEN 1 ELSE 0 END) AS volunteer_facilities,
+                    COUNT(DISTINCT region_normalised) AS regions_covered,
+                    ROUND(AVG(data_completeness_score), 3) AS avg_completeness
+                FROM {CATALOG}.gold_idp_enriched""",
+                max_rows=1,
+            ),
+            DatabricksQueryExecutor.execute(
+                f"""SELECT COUNT(*) AS critical_desert_regions
+                FROM {CATALOG}.gold_medical_desert_scores
+                WHERE mds_label IN ('Critical Desert', 'Severe Desert')""",
+                max_rows=1,
+            ),
+            DatabricksQueryExecutor.execute(
+                f"SELECT ROUND(AVG(medical_desert_score), 3) AS avg_desert_score FROM {CATALOG}.gold_medical_desert_scores",
+                max_rows=1,
+            ),
+        )
+
+        main = results[0][0] if results[0] else {}
+        desert_cnt = results[1][0] if results[1] else {}
+        desert_avg = results[2][0] if results[2] else {}
+
+        stats = {
+            "total_facilities": main.get("total_facilities", 0),
+            "hospitals": main.get("hospitals", 0),
+            "clinics": main.get("clinics", 0),
+            "ngos": main.get("ngos", 0),
+            "volunteer_facilities": main.get("volunteer_facilities", 0),
+            "regions_covered": main.get("regions_covered", 0),
+            "avg_completeness": float(main.get("avg_completeness") or 0),
+            "critical_desert_regions": desert_cnt.get("critical_desert_regions", 0),
+            "avg_desert_score": float(desert_avg.get("avg_desert_score") or 0),
+        }
+        await CacheService.set(cache_key, stats, ttl=900)
+        if data_source_header is not None:
+            data_source_header["source"] = "databricks"
+        return stats
+
+    @staticmethod
+    async def get_regions() -> list[str]:
+        cache_key = "regions:list"
+        cached = await CacheService.get(cache_key)
+        if cached:
+            return cached
+        rows = await DatabricksQueryExecutor.execute(
+            f"SELECT DISTINCT region_normalised FROM {CATALOG}.gold_idp_enriched WHERE region_normalised IS NOT NULL ORDER BY region_normalised"
+        )
+        regions = [r["region_normalised"] for r in rows if r.get("region_normalised")]
+        await CacheService.set(cache_key, regions, ttl=3600)
+        return regions
+
+    # ── Desert & Regional ──────────────────────────────────────────────────────
+
+    @staticmethod
+    async def get_desert_scores(data_source_header: Optional[dict] = None) -> list[dict]:
+        cache_key = "desert:scores"
+        cached = await CacheService.get(cache_key)
+        if cached:
+            if data_source_header is not None:
+                data_source_header["source"] = "cache"
+            return cached
+
+        rows = await DatabricksQueryExecutor.execute(
+            f"SELECT * FROM {CATALOG}.gold_medical_desert_scores ORDER BY medical_desert_score DESC",
+            max_rows=50,
+        )
+        for row in rows:
+            for col in ["critical_specialties_missing", "covered_specialty_names", "recommended_actions"]:
+                row[col] = _parse_json_col(row.get(col))
+
+        await CacheService.set(cache_key, rows, ttl=600)
+        if data_source_header is not None:
+            data_source_header["source"] = "databricks"
+        return rows
+
+    @staticmethod
+    async def get_regional_summary(data_source_header: Optional[dict] = None) -> list[dict]:
+        cache_key = "regional:summary"
+        cached = await CacheService.get(cache_key)
+        if cached:
+            if data_source_header is not None:
+                data_source_header["source"] = "cache"
+            return cached
+
+        rows = await DatabricksQueryExecutor.execute(
+            f"""SELECT region_normalised, total_facilities, clinical_facility_count,
+                hospital_count, clinic_count, ngo_count, avg_doctors, total_doctors,
+                total_beds, avg_bed_capacity, emergency_medicine_facilities,
+                obstetrics_facilities, surgery_facilities, pediatrics_facilities,
+                icu_facilities, infectious_disease_facilities, radiology_facilities,
+                mental_health_facilities, missing_critical_specialties,
+                critical_specialty_gap_count, recommended_actions,
+                medical_desert_score, desert_label,
+                region_centroid_lat, region_centroid_lon,
+                rag_ready_count, total_region_anomalies, volunteer_facilities
+            FROM {CATALOG}.gold_regional_summary
+            ORDER BY medical_desert_score DESC NULLS LAST""",
+            max_rows=50,
+        )
+        for row in rows:
+            for col in ["missing_critical_specialties", "recommended_actions"]:
+                row[col] = _parse_json_col(row.get(col))
+
+        await CacheService.set(cache_key, rows, ttl=600)
+        if data_source_header is not None:
+            data_source_header["source"] = "databricks"
+        return rows
+
+    @staticmethod
+    async def get_desert_regions() -> list[dict]:
+        """Minimal region data for map heatmap overlay."""
+        cache_key = "desert:regions_map"
+        cached = await CacheService.get(cache_key)
+        if cached:
+            return cached
+
+        rows = await DatabricksQueryExecutor.execute(
+            f"""SELECT region AS region, centroid_lat AS lat, centroid_lon AS lon,
+                medical_desert_score, mds_label, total_facilities, total_doctors, total_beds
+            FROM {CATALOG}.gold_medical_desert_scores
+            WHERE centroid_lat IS NOT NULL AND centroid_lon IS NOT NULL""",
+            max_rows=50,
+        )
+        await CacheService.set(cache_key, rows, ttl=600)
+        return rows
+
+    @staticmethod
+    async def get_specialty_gaps() -> list[dict]:
+        cache_key = "specialty:gaps"
+        cached = await CacheService.get(cache_key)
+        if cached:
+            return cached
+
+        rows = await DatabricksQueryExecutor.execute(
+            f"""SELECT region_normalised AS region, desert_label, critical_specialty_gap_count AS gap_count,
+                missing_critical_specialties AS missing_specialties
+            FROM {CATALOG}.gold_regional_summary
+            WHERE critical_specialty_gap_count > 0
+            ORDER BY critical_specialty_gap_count DESC""",
+            max_rows=50,
+        )
+        for row in rows:
+            row["missing_specialties"] = _parse_json_col(row.get("missing_specialties"))
+
+        await CacheService.set(cache_key, rows, ttl=600)
+        return rows
+
+    # ── Anomalies ──────────────────────────────────────────────────────────────
+
+    @staticmethod
+    async def get_anomalies(
+        risk_level: str = "",
+        region: str = "",
+        limit: int = 50,
+        offset: int = 0,
+        data_source_header: Optional[dict] = None,
+    ) -> dict:
+        cache_key = CacheService.build_key("anomalies", risk_level, region, limit, offset)
+        cached = await CacheService.get(cache_key)
+        if cached:
+            if data_source_header is not None:
+                data_source_header["source"] = "cache"
+            return cached
+
+        where: list[str] = []
+        params: list = []
+
+        if risk_level:
+            where.append("anomaly_risk_level = ?")
+            params.append(risk_level)
+        if region:
+            where.append("region_normalised = ?")
+            params.append(region)
+
+        # Only show flagged facilities
+        where.append("anomaly_risk_level != 'CLEAN'")
+
+        where_clause = f"WHERE {' AND '.join(where)}"
+
+        count_rows = await DatabricksQueryExecutor.execute(
+            f"SELECT COUNT(*) AS total FROM {CATALOG}.gold_anomaly_flags {where_clause}",
+            params, max_rows=1,
+        )
+        total = count_rows[0]["total"] if count_rows else 0
+
+        rows = await DatabricksQueryExecutor.execute(
+            f"""SELECT unique_id, name, city_clean, region_normalised,
+                facility_type_clean, latitude, longitude,
+                total_anomaly_flags, anomaly_risk_level,
+                llm_priority_action, llm_data_quality_score,
+                llm_confirmed_anomaly_count, llm_anomaly_severity,
+                llm_clinical_assessment, llm_false_positive_reason,
+                stat_anomaly_capability_inflation, stat_anomaly_hospital_no_doctors,
+                stat_anomaly_clinic_claims_icu, stat_anomaly_ghost_facility,
+                stat_anomaly_procedure_breadth, stat_anomaly_specialty_mismatch,
+                enhanced_procedures_no_equipment, enhanced_ghost_hospital,
+                enhanced_type_capability_mismatch, enhanced_low_idp_confidence,
+                enhanced_suspicious_completeness, enhanced_icu_no_infrastructure,
+                data_completeness_score, capability_confidence, capability_is_valid,
+                medical_desert_score, desert_label
+            FROM {CATALOG}.gold_anomaly_flags
+            {where_clause}
+            ORDER BY total_anomaly_flags DESC NULLS LAST, llm_data_quality_score ASC NULLS LAST
+            LIMIT {limit} OFFSET {offset}""",
+            params, max_rows=limit,
+        )
+
+        result = {"total": total, "items": rows}
+        await CacheService.set(cache_key, result, ttl=300)
+        if data_source_header is not None:
+            data_source_header["source"] = "databricks"
+        return result
+
+    @staticmethod
+    async def get_anomaly_summary(data_source_header: Optional[dict] = None) -> dict:
+        cache_key = "anomalies:summary"
+        cached = await CacheService.get(cache_key)
+        if cached:
+            if data_source_header is not None:
+                data_source_header["source"] = "cache"
+            return cached
+
+        import asyncio
+        results = await asyncio.gather(
+            DatabricksQueryExecutor.execute(
+                f"SELECT anomaly_risk_level, COUNT(*) AS cnt FROM {CATALOG}.gold_anomaly_flags GROUP BY anomaly_risk_level"
+            ),
+            DatabricksQueryExecutor.execute(
+                f"""SELECT
+                    SUM(CASE WHEN stat_anomaly_capability_inflation THEN 1 ELSE 0 END) AS capability_inflation,
+                    SUM(CASE WHEN stat_anomaly_hospital_no_doctors THEN 1 ELSE 0 END) AS hospital_no_doctors,
+                    SUM(CASE WHEN stat_anomaly_clinic_claims_icu THEN 1 ELSE 0 END) AS clinic_claims_icu,
+                    SUM(CASE WHEN stat_anomaly_ghost_facility THEN 1 ELSE 0 END) AS ghost_facility,
+                    SUM(CASE WHEN stat_anomaly_procedure_breadth THEN 1 ELSE 0 END) AS procedure_breadth,
+                    SUM(CASE WHEN stat_anomaly_specialty_mismatch THEN 1 ELSE 0 END) AS specialty_mismatch
+                FROM {CATALOG}.gold_anomaly_flags"""
+            ),
+            DatabricksQueryExecutor.execute(
+                f"""SELECT region_normalised, COUNT(*) AS cnt
+                FROM {CATALOG}.gold_anomaly_flags
+                WHERE anomaly_risk_level IN ('CRITICAL', 'HIGH')
+                GROUP BY region_normalised
+                ORDER BY cnt DESC
+                LIMIT 10"""
+            ),
+        )
+
+        by_risk = {r["anomaly_risk_level"]: r["cnt"] for r in results[0]}
+        type_counts = results[1][0] if results[1] else {}
+        worst_regions = {r["region_normalised"]: r["cnt"] for r in results[2]}
+
+        summary = {
+            "by_risk_level": by_risk,
+            "anomaly_type_counts": type_counts,
+            "worst_regions": worst_regions,
+        }
+        await CacheService.set(cache_key, summary, ttl=600)
+        if data_source_header is not None:
+            data_source_header["source"] = "databricks"
+        return summary
+
+    @staticmethod
+    async def execute_agent_sql(sql: str) -> list[dict]:
+        """Execute agent-generated SQL with security validation."""
+        FORBIDDEN = ["DROP", "CREATE", "INSERT", "UPDATE", "DELETE",
+                     "ALTER", "TRUNCATE", "EXEC", "EXECUTE", "GRANT", "REVOKE"]
+        sql_upper = sql.upper()
+        for word in FORBIDDEN:
+            if word in sql_upper:
+                raise ValueError(f"Forbidden SQL keyword: {word}")
+
+        # Ensure LIMIT is present
+        if "LIMIT" not in sql_upper:
+            sql = sql.rstrip(";") + " LIMIT 50"
+
+        return await DatabricksQueryExecutor.execute(sql, max_rows=100)
+
+    @staticmethod
+    def execute_agent_sql_sync(sql: str) -> list[dict]:
+        """Synchronous version for LangGraph agent nodes running in threads."""
+        FORBIDDEN = ["DROP", "CREATE", "INSERT", "UPDATE", "DELETE",
+                     "ALTER", "TRUNCATE", "EXEC", "EXECUTE", "GRANT", "REVOKE"]
+        sql_upper = sql.upper()
+        for word in FORBIDDEN:
+            if word in sql_upper:
+                raise ValueError(f"Forbidden SQL keyword: {word}")
+
+        if "LIMIT" not in sql_upper:
+            sql = sql.rstrip(";") + " LIMIT 50"
+
+        return DatabricksQueryExecutor.execute_sync(sql, max_rows=100)
+
+    @staticmethod
+    async def get_suggested_queries() -> list[str]:
+        return [
+            "How many hospitals have surgical capabilities in Ashanti region?",
+            "Which regions are medical deserts with no ICU facilities?",
+            "Find facilities that accept volunteers in Upper East region",
+            "What are the top anomalies detected in Greater Accra?",
+            "Which clinics claim ICU but have no documented equipment?",
+            "Where is the nearest facility with obstetrics to Tamale?",
+            "What specialties are missing in the Northern region?",
+            "How many ghost facilities were detected by the AI agent?",
+            "Compare hospital density between Greater Accra and Upper West",
+            "Which NGOs serve rural communities in the Volta region?",
+            "What is the medical desert score for Savannah region?",
+            "List all facilities with both surgery and ICU capabilities",
+            "Which facilities have data completeness below 40%?",
+            "How many facilities accept volunteer doctors in Ghana?",
+            "What are the most critical healthcare gaps in Bono East?",
+        ]
