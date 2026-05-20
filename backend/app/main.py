@@ -101,9 +101,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Middleware stack (order matters)
-    app.add_middleware(GZipMiddleware, minimum_size=1000)
-
+    # Middleware stack (order matters) — ensure CORS is applied before GZip
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins_list,
@@ -112,6 +110,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
         expose_headers=["X-Data-Source", "X-Response-Time", "X-Request-ID"],
     )
+
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
 
     # Request ID + Timing middleware
     @app.middleware("http")
