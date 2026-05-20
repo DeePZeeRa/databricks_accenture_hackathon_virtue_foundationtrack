@@ -10,9 +10,8 @@ Key outcomes
 
 Live demo (example)
 - Backend (Render): https://databricks-accenture-hackathon-virtue.onrender.com
-- Frontend (Vercel): https://databricks-accenture-hackathon-virt.vercel.app
+- Frontend (Vercel): https://virtue-foundation-ghana-dd.vercel.app
 
-If you deploy elsewhere, update `VITE_API_URL` and `CORS_ORIGINS` accordingly.
 
 ## What I built (high-level)
 - IDP Agent: A data-first agent that parses free-form facility text, normalizes capabilities into the canonical schema, and reasons about missing or conflicting claims.
@@ -73,11 +72,6 @@ npm run dev
 
 Security note: remove any real tokens from committed `.env` files and rotate compromised tokens immediately.
 
-## Deployment (split, free tiers)
-1. Deploy backend to Render (use `backend/Dockerfile` and `backend/render.yaml`). Set environment variables in the Render service (including `CORS_ORIGINS` and Databricks secrets).
-2. Deploy frontend to Vercel with Root Directory `frontend`, Build Command `npm run build`, Output `dist`, and Environment Variable `VITE_API_URL` set to your Render URL.
-3. Update `CORS_ORIGINS` on Render to include your Vercel domain and localhost origins used for development.
-
 ## Verification & endpoints
 - `GET /health` — returns Databricks and FAISS status + SQL health check.
 - `GET /api/v1/regions/summary` — region-level summary metrics.
@@ -92,11 +86,4 @@ Security note: remove any real tokens from committed `.env` files and rotate com
 ## Next steps & notes
 - Improve agent traceability with MLflow trace links for each agent sub-step (stretch goal).
 - Add automated tests for extraction accuracy and end-to-end SSE streams.
-
-## Contributing
-PRs welcome. Please file issues for bugs or feature requests.
-
----
-If you'd like, I can also add a short `SHOWCASE.md` with screenshots and example queries to highlight the agent flows on the repo front page.
-
 
