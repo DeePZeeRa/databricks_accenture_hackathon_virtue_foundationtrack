@@ -11,8 +11,9 @@ The frontend reads the backend URL from `VITE_API_URL`, and the backend allows C
 
 1. Push this repository to GitHub.
 2. Open Render and create a new Web Service from the repository.
-3. Use the `backend` folder as the root directory.
-4. Let Render use `backend/render.yaml`.
+3. On the form shown in your screenshot, choose `Docker` as the runtime.
+4. Set the `Root Directory` to `backend`.
+5. Set the `Dockerfile Path` to `Dockerfile`.
 5. Set these required environment variables in Render:
    - `DATABRICKS_HOST`
    - `DATABRICKS_TOKEN`
@@ -23,12 +24,14 @@ The frontend reads the backend URL from `VITE_API_URL`, and the backend allows C
    - `EMBED_ENDPOINT`
    - `SECRET_KEY` at least 32 characters
    - `CORS_ORIGINS`
-6. Redeploy the service.
+6. Deploy the service.
 
-Suggested `CORS_ORIGINS` value while testing:
+If you prefer Render Blueprint instead of the Web Service form, you can also use `backend/render.yaml`. For the screen in your screenshot, the Docker settings above are the correct ones.
+
+Use this `CORS_ORIGINS` value for this deployment:
 
 ```text
-http://localhost:5173,https://your-vercel-app.vercel.app
+http://localhost:5173,http://localhost:3000,https://dd-vfghana.vercel.app
 ```
 
 If you only want the demo mode to work without live Databricks access, leave the Databricks secrets empty and the backend will fall back to bundled FAISS and CSV data where possible.

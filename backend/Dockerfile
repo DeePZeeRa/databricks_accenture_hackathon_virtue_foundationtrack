@@ -32,9 +32,6 @@ RUN if [ -n "$FAISS_META_URL" ]; then \
     echo "FAISS metadata downloaded at build time"; \
     fi
 
-# Copy local FAISS files if they exist (for development builds)
-COPY rag_data/ /app/rag_data/ 2>/dev/null || true
-
 EXPOSE 8000
 
 ENV FAISS_INDEX_PATH=/app/rag_data/faiss_index.bin

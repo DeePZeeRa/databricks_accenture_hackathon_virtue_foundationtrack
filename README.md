@@ -64,7 +64,7 @@ Use the step-by-step guide in [DEPLOYMENT.md](DEPLOYMENT.md) for the exact seque
 
 1. Deploy the backend first on Render and copy the public URL.
 2. Deploy the frontend on Vercel with `VITE_API_URL` set to that Render URL.
-3. Update `CORS_ORIGINS` in Render to include your Vercel domain.
+3. Update `CORS_ORIGINS` in Render to `http://localhost:5173,http://localhost:3000,https://dd-vfghana.vercel.app`.
 
 ## Verification
 

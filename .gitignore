@@ -18,7 +18,6 @@ venv/
 .mypy_cache/
 .ruff_cache/
 graphify-out/
-scirpts/
 .agent/
 .agents
 .ai-dev-kit
