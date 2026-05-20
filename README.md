@@ -275,6 +275,745 @@ The Databricks notebooks implement the full **Medallion Architecture** (Bronze �
 #### [`06_langgraph_agent.ipynb`](databricks/notebooks/06_langgraph_agent.ipynb)
 - **Role**: Development prototyping workspace.
 - **Purpose**: Used to design and test LangGraph node logic, intent classification routing, and tool validation before porting to the FastAPI backend.
+- **Output & Test Demo**:
+```
+========================================================================
+VIRTUE FOUNDATION v5.1 EVALUATION SUITE (24 queries)
+========================================================================
+
+[1.1] 'How many hospitals have cardiology in Ghana?'
+
+======================================================================
+Query      : How many hospitals have cardiology in Ghana?
+Type       : regional_analysis (simple)
+Plan       : ['sql']
+Steps      : ['Router → regional_analysis | sql → []', "SQL: 1 rows | ['virtue_foundation.ghana.gold_idp_enriched']", 'Synthesiser: answer assembled']
+Confidence : 0.10 | Halluc risk: 0.30
+Citations  : 0 fac | 3 nodes
+MLflow     : cb64e820a0144970adc45e4f6a2ef264
+======================================================================
+
+Answer:
+According to facility records, there are 20 hospitals with cardiology services in Ghana. This information suggests that cardiology care is available in various parts of the country, but it would be beneficial to know the specific regions and distribution of these hospitals to identify potential gaps in service. 
+
+7 of 16 regions in Ghana may have limited access to cardiology services, but without more detailed information, I have moderate confidence in this assessment. 
+
+An interactive map with 20 markers is ready to provide a visual representation of the hospitals with cardiology services across Ghana. 
+
+Recommended actions: 
+1. Conduct a more detailed analysis of the distribution of hospitals with cardiology services to identify regions with limited access.
+2. Collaborate with local health authorities to develop strategies for improving cardiology care in underserved regions.
+3. Consider investing in telemedicine or outreach programs to expand access to cardiology services in areas with limited hospital availability.
+
+  Type     : ✅ got='regional_analysis' expected='regional_analysis'
+  Answer   : ✅ (1034 chars)
+  Cits     : 0 fac / 3 nodes
+  Quality  : conf=0.10 | halluc=0.30
+
+[1.2] 'How many hospitals in Ashanti region have surgery?'
+
+======================================================================
+Query      : How many hospitals in Ashanti region have surgery?
+Type       : regional_analysis (simple)
+Plan       : ['sql']
+Steps      : ['Router → regional_analysis | sql → []', "SQL: 1 rows | ['virtue_foundation.ghana.gold_idp_enriched']", 'Synthesiser: answer assembled']
+Confidence : 0.10 | Halluc risk: 0.30
+Citations  : 0 fac | 3 nodes
+MLflow     : ef7e2a55374341d589e259283d97052f
+======================================================================
+
+Answer:
+According to facility records, 16 hospitals in the Ashanti region have surgery capabilities. 
+
+An interactive map with 16 markers is ready to provide a visual representation of these hospitals. 
+
+Recommended actions: 
+1. Conduct further analysis to assess the capacity and quality of surgical services at these hospitals.
+2. Identify areas with high demand for surgical services and consider allocating resources to support these hospitals.
+
+Note: The data only provides information on the number of hospitals with surgery capabilities and does not offer insights into the quality or capacity of these services. (moderate confidence)
+
+  Type     : ✅ got='regional_analysis' expected='regional_analysis'
+  Answer   : ✅ (633 chars)
+  Cits     : 0 fac / 3 nodes
+  Quality  : conf=0.10 | halluc=0.30
+
+[1.3] 'What services does Korle Bu Teaching Hospital offer?'
+FAISS loaded: 972 vectors from /Workspace/Users/dasdeepayan08@gmail.com/databricks_accenture_hackathon_virtue_foundationtrack/databricks/rag/faiss_index.bin
+
+======================================================================
+Query      : What services does Korle Bu Teaching Hospital offer?
+Type       : facility_lookup (simple)
+Plan       : ['rag']
+Steps      : ['Router → facility_lookup | rag → []', 'RAG: 10 results', 'Synthesiser: answer assembled']
+Confidence : 1.00 | Halluc risk: 0.10
+Citations  : 6 fac | 3 nodes
+MLflow     : 3443810d61224e75ae98e097cb393847
+======================================================================
+
+Answer:
+According to facility records, Korle Bu Teaching Hospital, located in Accra, Greater Accra, offers various services. The hospital has specialties in cardiology and cardiac surgery, and provides procedures such as Electrocardiogram (ECG) testing, 2D Echocardiography (ECHO) testing, Exercise Stress Test, and Cardiac Consultation services. Additionally, Open heart surgeries are performed at the National Cardiothoracic Centre of the Korle Bu Teaching Hospital.
+
+The hospital also has a Reproductive Health Centre that offers services such as gynecology and obstetrics, family planning and complex contraception, and reproductive endocrinology and infertility. The centre provides procedures including Cervical cancer screening, Cervical cancer vaccination, and Family planning services.
+
+It's worth noting that the National Cardiothoracic Centre of the Korle Bu Teaching Hospital has its own set of specialties and procedures, including Holter Monitoring, Electrocardiogram (ECG) testing, 2D Electrocardiogram (ECHO) services, Exercise Stress Test, and Cardiac Consultation services.
+
+Recommended actions for programme officers may include:
+- Collaborating with Korle Bu Teaching Hospital to support their cardiology and cardiac surgery services
+- Providing resources and training to the Reproductive Health Centre to enhance their family planning and reproductive health services
+- Exploring opportunities to support the National Cardiothoracic Centre of the Korle Bu Teaching Hospital in their provision of specialized cardiac services.
+
+An interactive map with 6 markers is ready to provide a visual representation of the locations and services offered by Korle Bu Teaching Hospital and other nearby facilities. (Moderate confidence)
+
+  Type     : ✅ got='facility_lookup' expected='facility_lookup'
+  Answer   : ✅ (1736 chars)
+  Cits     : 6 fac / 3 nodes
+  Quality  : conf=1.00 | halluc=0.10
+
+[1.4] 'Are there any clinics in Kumasi that do dialysis?'
+
+======================================================================
+Query      : Are there any clinics in Kumasi that do dialysis?
+Type       : facility_lookup (simple)
+Plan       : ['rag']
+Steps      : ['Router → facility_lookup | rag → []', 'RAG: 7 results', 'Synthesiser: answer assembled']
+Confidence : 1.00 | Halluc risk: 0.10
+Citations  : 6 fac | 3 nodes
+MLflow     : 3dbaf175516e40db80e44149d184c9e5
+======================================================================
+
+Answer:
+According to facility records, there is at least one clinic in Kumasi that provides dialysis services: FirstCare Health Services, located in Kumasi, Ashanti region. This clinic offers renal dialysis services, among other specialties such as internal medicine, gynecology and obstetrics, otolaryngology, general surgery, pediatrics, and psychiatry.
+
+It's worth noting that while FirstCare Health Services provides dialysis services, there are other clinics in different regions that specialize in dialysis, such as Global Dialysis Centre, FAB Mercy Dialysis Center, and Labone Dialysis Centre, all located in Accra, Greater Accra region. Additionally, Wipe-Away Foundation in Damongo, Savannah region, also offers nephrology services, although it's not explicitly stated that they provide dialysis.
+
+Recommended actions: 
+1. Verify the current availability and quality of dialysis services at FirstCare Health Services in Kumasi.
+2. Consider partnering with other dialysis clinics in Accra to expand access to dialysis services in the country.
+3. Explore the possibility of supporting Wipe-Away Foundation in Damongo to develop their nephrology services, potentially including dialysis.
+
+An interactive map with 6 markers is ready to visualize the locations of these clinics. (Moderate confidence)
+
+  Type     : ✅ got='facility_lookup' expected='facility_lookup'
+  Answer   : ✅ (1296 chars)
+  Cits     : 6 fac / 3 nodes
+  Quality  : conf=1.00 | halluc=0.10
+
+[1.5] 'Which region in Ghana has the most hospitals?'
+
+======================================================================
+Query      : Which region in Ghana has the most hospitals?
+Type       : regional_analysis (simple)
+Plan       : ['sql']
+Steps      : ['Router → regional_analysis | sql → []', "SQL: 1 rows | ['virtue_foundation.ghana.gold_regional_summary']", 'Synthesiser: answer assembled']
+Confidence : 0.10 | Halluc risk: 0.30
+Citations  : 0 fac | 3 nodes
+MLflow     : 384f3a51a7fc4245a0b4abbc112bd0d4
+======================================================================
+
+Answer:
+According to facility records, the Greater Accra region in Ghana has the most hospitals. Unfortunately, with only 1 record available, I have low confidence in this assessment, as it may not reflect the complete picture of hospital distribution across Ghana. To confirm this finding, I would recommend collecting and analyzing more comprehensive data on hospital locations and numbers across all 16 regions of Ghana. 
+
+An interactive map with 1 marker is ready to visualize the available data. 
+
+Recommended actions: 
+1. Conduct a thorough survey to gather data on hospital locations and numbers in all 16 regions of Ghana.
+2. Update the existing records to reflect the accurate distribution of hospitals across the country.
+3. Analyze the updated data to identify regions with the most hospitals and those with limited access to healthcare facilities.
+
+  Type     : ✅ got='regional_analysis' expected='regional_analysis'
+  Answer   : ✅ (851 chars)
+  Cits     : 0 fac / 3 nodes
+  Quality  : conf=0.10 | halluc=0.30
+
+[2.1] 'How many hospitals treating malaria are within 50km of Accra?'
+
+======================================================================
+Query      : How many hospitals treating malaria are within 50km of Accra?
+Type       : geo_search (moderate)
+Plan       : ['geo', 'medical']
+Steps      : ["Router → geo_search | geo → ['medical']", 'Geo: 25 facilities within 50.0km of Accra | 0 cold spots', 'Medical reasoning: 2819 chars', 'Synthesiser: answer assembled']
+Confidence : 0.80 | Halluc risk: 0.31
+Citations  : 0 fac | 4 nodes
+MLflow     : b0d554acb29b4c1d959823eb939c6dd2
+======================================================================
+
+Answer:
+Based on the provided evidence, there are 25 facilities within 50km of Accra. Out of these, at least 2 hospitals (Ghana Police Hospital and Accra Psychiatric Hospital) are capable of treating malaria, considering they have services for infectious disease. 
+
+According to facility records, the Ghana Police Hospital, located 1.62km from Accra, has a facility type of "hospital" and has services for emergency medicine, surgery, obstetrics, radiology, infectious disease, and pediatrics. The Accra Psychiatric Hospital, located in Accra, has emergency medicine services but lacks surgery, ICU, obstetrics, and radiology services.
+
+7 of 10 hospitals within 50km of Accra lack ICU services, including Ghana Police Hospital and Accra Psychiatric Hospital. This poses a significant concern for critical care services in the region.
+
+An interactive map with 25 markers is ready to visualize the locations of these facilities.
+
+Recommended actions for NGOs operating in the Greater Accra region include:
+- Collaborating with the Ghanaian government to establish ICU services in major hospitals like Ghana Police Hospital and Accra Psychiatric Hospital.
+- Providing training and resources to alternative medicine facilities like Mizprom Herbal Centre to enhance their services and capabilities.
+- Supporting the development of comprehensive medical care services in the region to address the workforce and infrastructure gaps.
+
+These recommendations are made with moderate confidence (60%) due to the limitations of the available data and the potential for misrepresentation of services by some facilities.
+
+  Type     : ✅ got='geo_search' expected='geo_search'
+  Answer   : ✅ (1597 chars)
+  Cits     : 0 fac / 4 nodes
+  Quality  : conf=0.80 | halluc=0.31
+
+[2.2] 'Which facilities are within 30km of Tamale?'
+
+======================================================================
+Query      : Which facilities are within 30km of Tamale?
+Type       : geo_search (moderate)
+Plan       : ['geo', 'medical']
+Steps      : ["Router → geo_search | geo → ['medical']", 'Geo: 22 facilities within 30.0km of Tamale | 0 cold spots', 'Medical reasoning: 3053 chars', 'Synthesiser: answer assembled']
+Confidence : 0.80 | Halluc risk: 0.31
+Citations  : 0 fac | 4 nodes
+MLflow     : 54da29b850cb4800bf73c4e8bc6d287f
+======================================================================
+
+Answer:
+There are 22 facilities within 30km of Tamale. According to facility records, three of these facilities are: 
+1. **Cape Coast Teaching Hospital**, a hospital located 1.6km from Tamale, offering a range of services including emergency medicine, surgery, ICU, obstetrics, radiology, and pediatrics.
+2. **Ummah Medical Center**, a hospital also 1.6km from Tamale, but lacking specialized services such as emergency medicine, surgery, and ICU.
+3. **Universal Health Clinic**, a clinic 1.6km from Tamale, offering radiology services but lacking emergency medicine, surgery, ICU, obstetrics, and pediatrics.
+
+An interactive map with 22 markers is ready to visualize the distribution of these facilities around Tamale.
+
+Recommended actions for NGOs in the Northern region, with a focus on Tamale, include:
+1. **Equipment Donation to Ummah Medical Center**: Donating equipment to enhance basic emergency and surgical capabilities.
+2. **Training and Capacity Building in Universal Health Clinic**: Providing targeted training programs for staff to enhance service offerings.
+3. **Supporting Cape Coast Teaching Hospital**: Offering resources to support the hospital's comprehensive range of services, ensuring continued access to advanced medical care for the local population.
+
+These interventions could help address the gaps in healthcare services and infrastructure in the region, improving the overall healthcare maturity score and reducing the medical desert score. (Moderate confidence)
+
+  Type     : ✅ got='geo_search' expected='geo_search'
+  Answer   : ✅ (1483 chars)
+  Cits     : 0 fac / 4 nodes
+  Quality  : conf=0.80 | halluc=0.31
+
+[2.3] 'Where are the largest geographic cold spots where surgery is abse'
+
+======================================================================
+Query      : Where are the largest geographic cold spots where surgery is absent?
+Type       : desert_analysis (complex)
+Plan       : ['geo', 'desert', 'sql']
+Steps      : ["Router → desert_analysis | desert → ['geo', 'sql']", 'Desert: 17 regions | 2 Severe | 2 cold spots', 'Geo: 69 facilities within 50.0km of Accra | 4 cold spots', "SQL: 2 rows | ['virtue_foundation.ghana.gold_regional_summary']", 'Synthesiser: answer assembled']
+Confidence : 0.63 | Halluc risk: 0.20
+Citations  : 0 fac | 5 nodes
+MLflow     : ced13f293b814326b2e0b3d818760a2e
+======================================================================
+
+Answer:
+According to facility records, 2 of 17 regions in Ghana lack surgical capabilities. The Savannah region has a medical desert score of 0.970600009, indicating a severe lack of healthcare services, including surgery. The Upper East region also has a high medical desert score of 0.935199976, suggesting significant gaps in healthcare services.
+
+Our analysis of 69 facilities within 50km of Accra shows that while some facilities like Ghana Police Hospital and Inter-Star Eye Clinic and Laser Center have surgical capabilities, there are large geographic areas without access to surgical care.
+
+Specifically, 7 of 17 regions lack emergency medicine, and 2 regions, Savannah and Upper East, have severe medical desert scores and are missing critical specialties, including general surgery. The Savannah region has 4 facilities, but none of them provide surgical services, resulting in a surgical access gap score of 1.0.
+
+An interactive map with 4 markers is ready to visualize these cold spots. 
+
+Recommended actions for the Savannah region include:
+1. URGENT: Deploy emergency medicine capacity — zero coverage detected
+2. URGENT: No surgical capacity — patients cannot receive operative care
+3. URGENT: No obstetrics — elevated maternal mortality risk
+
+For the Upper East region, recommended actions include:
+1. URGENT: Deploy emergency medicine capacity — zero coverage detected
+2. URGENT: No surgical capacity — patients cannot receive operative care
+3. URGENT: No obstetrics — elevated maternal mortality risk
+
+We have moderate confidence in these findings, given the data completeness score of 0.8399999737739563 for the Ghana Police Hospital and 0.9010000228881836 for the Inter-Star Eye Clinic and Laser Center.
+
+  Type     : ⚠️ got='desert_analysis' expected='geo_search'
+  Answer   : ✅ (1716 chars)
+  Cits     : 0 fac / 5 nodes
+  Quality  : conf=0.63 | halluc=0.20
+
+[4.1] 'Which facilities have implausible ICU claims without infrastructu'
+
+======================================================================
+Query      : Which facilities have implausible ICU claims without infrastructure?
+Type       : anomaly_analysis (complex)
+Plan       : ['anomaly', 'graph', 'medical']
+Steps      : ["Router → anomaly_analysis | anomaly → ['graph', 'medical']", 'Anomaly: 30 flagged | report: 10 regions', 'Capability graph: 40 findings', 'Medical reasoning: 3165 chars', 'Synthesiser: answer assembled']
+Confidence : 0.85 | Halluc risk: 0.33
+Citations  : 0 fac | 5 nodes
+MLflow     : 70f068526a944e7c9a67e6a4f286315c
+======================================================================
+
+Answer:
+Based on our analysis, we have identified 3 facilities with implausible ICU claims without infrastructure: 
+
+1. Shekhinah Clinic in Tamale, Northern region, which claims to have ICU and surgery services but has zero equipment, raising concerns about its ability to provide these services.
+2. Beaver Medical, which has 7 gaps in its dependency chain, including emergency:ambulance_or_referral, emergency:oxygen, and obstetrics:delivery_room, with a confidence level of 0.87.
+3. Center for Cosmetic Surgery, Ghana, which has 3 gaps in its dependency chain, including surgery:sterilization, surgery:blood_support, and surgery:recovery_beds, with a confidence level of 0.87.
+
+According to facility records, Shekhinah Clinic's claim of ICU services without oxygen, patient monitoring, trained staff, and beds is suspicious, with a confidence level of 0.75. 
+
+We have moderate confidence that these facilities may be misrepresenting their capabilities, and we recommend verifying their ICU and surgery capabilities. 
+
+Recommended actions:
+- Verify ICU and surgery capabilities at Shekhinah Clinic, Beaver Medical, and Center for Cosmetic Surgery, Ghana.
+- Conduct a thorough assessment of the infrastructure and equipment available at these facilities to support complex medical procedures.
+- Provide training and support to healthcare professionals in the Northern region to address the workforce gap.
+- Consider investing in essential equipment such as oxygen and patient monitoring systems to support ICU services in the region.
+
+An interactive map with 3 markers is ready to visualize the locations of these facilities.
+
+  Type     : ✅ got='anomaly_analysis' expected='anomaly_analysis'
+  Answer   : ✅ (1617 chars)
+  Cits     : 0 fac / 5 nodes
+  Quality  : conf=0.85 | halluc=0.33
+
+[4.2] 'Show facilities with enhanced ghost hospital flags'
+
+======================================================================
+Query      : Show facilities with enhanced ghost hospital flags
+Type       : anomaly_analysis (complex)
+Plan       : ['anomaly', 'graph', 'medical']
+Steps      : ["Router → anomaly_analysis | anomaly → ['graph', 'medical']", 'Anomaly: 30 flagged | report: 10 regions', 'Capability graph: 40 findings', 'Medical reasoning: 2896 chars', 'Synthesiser: answer assembled']
+Confidence : 0.85 | Halluc risk: 0.33
+Citations  : 0 fac | 5 nodes
+MLflow     : 52b2cc593bcf4cf9ae0586112a58c984
+======================================================================
+
+Answer:
+Based on the provided evidence, I have identified facilities with enhanced ghost hospital flags. 
+
+1. **Facilities with Enhanced Ghost Hospital Flags**: 
+Unfortunately, none of the facilities in the provided evidence have an "enhanced_ghost_hospital" flag set to true. However, Shekhinah Clinic in Tamale, Northern Region, has a "ghost_probability_score" of 0.25999999046325684, indicating a moderate risk of being a ghost hospital. 
+
+2. **Facilities with Capability Mismatch**: 
+Shekhinah Clinic has an "enhanced_type_capability_mismatch" flag set to true, indicating a mismatch between its claimed capabilities and its actual facilities. Specifically, the clinic claims to have ICU and surgery services, but its clinic-tier status and lack of equipment raise suspicions.
+
+3. **Facilities with Capability Dependency Gaps**: 
+Beaver Medical and Center for Cosmetic Surgery, Ghana, have significant gaps in their dependency chains. Beaver Medical has 7 gaps, including emergency:ambulance_or_referral, emergency:oxygen, and obstetrics:delivery_room, with a confidence level of 0.87. Center for Cosmetic Surgery, Ghana, has 3 gaps, including surgery:sterilization, surgery:blood_support, and surgery:recovery_beds, with a confidence level of 0.87.
+
+4. **Regions with Workforce and Infrastructure Gaps**: 
+The Northern Region, where Shekhinah Clinic is located, has a significant workforce and infrastructure gap. The region's healthcare maturity score is 0.6107, indicating a need for improvement. 
+
+**Recommended Actions**: 
+
+* Verify the capabilities of Shekhinah Clinic, Beaver Medical, and Center for Cosmetic Surgery, Ghana, to ensure they align with their claimed services.
+* Address the dependency gaps in Beaver Medical and Center for Cosmetic Surgery, Ghana, to ensure they have the necessary infrastructure and equipment to provide their claimed services.
+* Improve the workforce and infrastructure in the Northern Region to support the provision of adequate healthcare services.
+
+**Confidence Level**: 
+The confidence level for these findings is moderate to high, ranging from 0.75 to 0.95, depending on the specific facility and finding. 
+
+An interactive map with 3 markers is ready to visualize the locations of these facilities.
+
+  Type     : ✅ got='anomaly_analysis' expected='anomaly_analysis'
+  Answer   : ✅ (2240 chars)
+  Cits     : 0 fac / 5 nodes
+  Quality  : conf=0.85 | halluc=0.33
+
+[4.4] 'Which facilities claim an unrealistic number of procedures?'
+
+======================================================================
+Query      : Which facilities claim an unrealistic number of procedures?
+Type       : anomaly_analysis (complex)
+Plan       : ['anomaly', 'graph', 'medical']
+Steps      : ["Router → anomaly_analysis | anomaly → ['graph', 'medical']", 'Anomaly: 30 flagged | report: 10 regions', 'Capability graph: 40 findings', 'Medical reasoning: 3628 chars', 'Synthesiser: answer assembled']
+Confidence : 0.85 | Halluc risk: 0.33
+Citations  : 0 fac | 5 nodes
+MLflow     : a1d3ea34b2e5447487e03cef71faedfd
+======================================================================
+
+Answer:
+Based on our analysis, 3 facilities claim an unrealistic number of procedures: Shekhinah Clinic in Tamale, Northern region, Beaver Medical, and Center for Cosmetic Surgery, Ghana. 
+
+According to facility records, Shekhinah Clinic claims to have ICU and surgery services, but has zero equipment, which is implausible. The clinic has a procedure count of 2, which is low considering its claimed capabilities. 
+
+Beaver Medical has 7 gaps in its dependency chain, including emergency:ambulance_or_referral, emergency:oxygen, and obstetrics:delivery_room, with a confidence level of 0.87. Center for Cosmetic Surgery, Ghana, has 3 gaps, including surgery:sterilization, surgery:blood_support, and surgery:recovery_beds, with a confidence level of 0.87. 
+
+We have moderate confidence that these facilities may be misrepresenting their capabilities. 
+
+Recommended actions: 
+1. Verify ICU and surgery capabilities at Shekhinah Clinic.
+2. Conduct a thorough assessment of the dependency chains at Beaver Medical and Center for Cosmetic Surgery, Ghana.
+3. Provide training and equipment to address the gaps in workforce and infrastructure in the Northern region.
+
+An interactive map with 3 markers is ready to visualize the locations of these facilities.
+
+  Type     : ✅ got='anomaly_analysis' expected='anomaly_analysis'
+  Answer   : ✅ (1244 chars)
+  Cits     : 0 fac / 5 nodes
+  Quality  : conf=0.85 | halluc=0.33
+
+[4.8] 'Which facilities have unusually high procedure breadth vs minimal'
+
+======================================================================
+Query      : Which facilities have unusually high procedure breadth vs minimal infrastructure?
+Type       : anomaly_analysis (complex)
+P
+
+... [*** WARNING: max output size exceeded, skipping output. ***] ...
+
+pacity, surgical capacity, and obstetrics care, as well as addressing the critical physician shortage. An interactive map with 2 markers is ready to visualize the locations of these regions.
+
+  Type     : ✅ got='desert_analysis' expected='desert_analysis'
+  Answer   : ✅ (1045 chars)
+  Cits     : 0 fac / 4 nodes
+  Quality  : conf=0.95 | halluc=0.23
+
+[5.3] 'What specialties are missing from the top 5 underserved regions?'
+
+======================================================================
+Query      : What specialties are missing from the top 5 underserved regions?
+Type       : desert_analysis (moderate)
+Plan       : ['desert', 'priority', 'medical']
+Steps      : ["Router → desert_analysis | desert → ['priority', 'medical']", 'Desert: 17 regions | 2 Severe | 2 cold spots', 'Priority: 17 regions | P1=0 P2=14', 'Medical reasoning: 3010 chars', 'Synthesiser: answer assembled']
+Confidence : 0.90 | Halluc risk: 0.30
+Citations  : 0 fac | 5 nodes
+MLflow     : 3c9419b86f404ff6be74a3b3e38a3aad
+======================================================================
+
+Answer:
+According to facility records, 4 of the top 5 underserved regions, including Savannah, Upper East, and 2 other regions, lack critical specialties. Specifically, these regions are missing emergency medicine, general surgery, and gynecology and obstetrics. The Savannah region, in particular, also lacks pediatrics. 
+
+In the Savannah region, there are 0 ICU facilities, 0 surgery facilities, and 0 obstetrics facilities, with a total of 0 doctors and 0 beds. The hospitals per 100k population is 0.49, which is extremely low. The average emergency readiness score is 0.0, indicating a complete lack of emergency care capacity.
+
+The Upper East region also has a severe medical desert score, with a critical specialty gap count of 3, missing emergency medicine, general surgery, and gynecology and obstetrics.
+
+Recommended actions for these regions include:
+- URGENT: Deploy emergency medicine capacity 
+- URGENT: Deploy surgical capacity 
+- URGENT: Deploy obstetrics care 
+- HIGH: Deploy pediatric care 
+
+An interactive map with 17 markers is ready to visualize the medical desert scores and missing specialties across the regions. (Moderate confidence)
+
+  Type     : ✅ got='desert_analysis' expected='desert_analysis'
+  Answer   : ✅ (1150 chars)
+  Cits     : 0 fac / 5 nodes
+  Quality  : conf=0.90 | halluc=0.30
+
+[5.4] 'Which regions have P1 or P2 intervention priority?'
+
+======================================================================
+Query      : Which regions have P1 or P2 intervention priority?
+Type       : healthcare_planning (complex)
+Plan       : ['planning', 'priority', 'ngo']
+Steps      : ["Router → healthcare_planning | planning → ['priority', 'ngo']", 'Planning: 17 regions, plan=2664 chars', 'Priority: 17 regions | P1=0 P2=14', 'NGO: 80 NGOs | 4 high-need regions without NGO coverage', 'Synthesiser: answer assembled']
+Confidence : 0.50 | Halluc risk: 0.60
+Citations  : 0 fac | 4 nodes
+MLflow     : 99eab9e0b3d24b6c947977792ead6d1a
+======================================================================
+
+Answer:
+According to the provided healthcare data, 4 of 17 regions have P1 or P2 intervention priority. Specifically, the Savannah region has a P2 intervention priority, with a regional priority score of 0.5192. 
+
+The recommended interventions for the Savannah region include: 
+1. Strengthening emergency stabilization, ambulance routing, and triage, 
+2. Performing targeted operational verification of flagged facilities, 
+3. Deploying diagnostic, surgical, and emergency equipment to address infrastructure gaps, 
+4. Addressing workforce shortages by deploying rotating clinicians and specialist outreach, and 
+5. Considering NGO mobile outreach and rotating specialist deployment programs.
+
+An interactive map with 17 markers is ready to visualize the regional priorities and intervention needs.
+
+In terms of NGO coverage gaps, 7 of 17 regions lack NGO presence, including Western North, Oti, Brong-Ahafo, and Ahafo. The Western North region, in particular, has a moderate desert score of 0.7262 and lacks critical specialties, ICU facilities, and emergency medicine facilities.
+
+Recommended actions for the Western North region include:
+1. Deploying emergency medicine teams to reduce mortality rates, 
+2. Recruiting and training healthcare staff, and procuring medical equipment to increase the healthcare workforce, 
+3. Providing training and capacity building for healthcare staff to increase competency, and 
+4. Establishing referral networks with nearby hospitals to increase referral rates.
+
+These actions aim to address the immediate, medium-term, and long-term needs of the regions with P1 or P2 intervention priority, and to improve healthcare outcomes in these areas. (Moderate confidence)
+
+  Type     : ⚠️ got='healthcare_planning' expected='priority_analysis'
+  Answer   : ✅ (1695 chars)
+  Cits     : 0 fac / 4 nodes
+  Quality  : conf=0.50 | halluc=0.60
+
+[5.5] 'What are the recommended interventions for Savannah region?'
+
+======================================================================
+Query      : What are the recommended interventions for Savannah region?
+Type       : healthcare_planning (complex)
+Plan       : ['planning', 'priority', 'ngo']
+Steps      : ["Router → healthcare_planning | planning → ['priority', 'ngo']", 'Planning: 17 regions, plan=3638 chars', 'Priority: 17 regions | P1=0 P2=14', 'NGO: 80 NGOs | 4 high-need regions without NGO coverage', 'Synthesiser: answer assembled']
+Confidence : 0.50 | Halluc risk: 0.60
+Citations  : 0 fac | 4 nodes
+MLflow     : ebbcdd82062341c59bdb840e92338219
+======================================================================
+
+Answer:
+According to facility records, the Savannah region has a severe desert score and lacks essential medical specialties. Based on the regional priorities, I recommend the following interventions for the Savannah region:
+
+1. **Strengthen emergency stabilization, ambulance routing, and triage**: This is a critical intervention to improve emergency care services in the region.
+2. **Perform targeted operational verification of flagged facilities**: This will help identify and address any operational gaps in the existing facilities.
+3. **Deploy diagnostic, surgical, and emergency equipment**: This will help address the critical infrastructure gap in the region.
+4. **Deploy rotating clinicians and specialist outreach**: This will help address the urgent workforce shortage in the region.
+5. **Consider NGO mobile outreach and rotating specialist deployment programs**: This will help improve access to specialized care in the region.
+
+These interventions are recommended based on the regional priority score of 0.5192, which indicates a high level of need in the Savannah region. I have moderate confidence in these recommendations, as they are based on a comprehensive analysis of the facility records and regional priorities.
+
+An interactive map with 4 markers is ready to provide more detailed information on the facilities and regions. 
+
+Recommended actions for NGO programme officers:
+
+* Collaborate with local authorities to deploy emergency medical teams to provide basic life-support services.
+* Deliver essential medical supplies, including medications, equipment, and consumables, to the existing facilities.
+* Recruit and deploy medical specialists, including emergency medicine, general surgery, gynecology and obstetrics, and pediatrics, to fill the gaps in the existing facilities.
+* Upgrade the existing facilities with essential medical equipment, including ICU and surgical equipment.
+* Provide training and capacity-building programs for the existing medical staff.
+
+By implementing these interventions, we can improve access to healthcare services, reduce mortality rates, and enhance the overall quality of care in the Savannah region.
+
+  Type     : ⚠️ got='healthcare_planning' expected='priority_analysis'
+  Answer   : ✅ (2156 chars)
+  Cits     : 0 fac / 4 nodes
+  Quality  : conf=0.50 | halluc=0.60
+
+[6.1] 'Which facilities have critical capability dependency gaps?'
+
+======================================================================
+Query      : Which facilities have critical capability dependency gaps?
+Type       : capability_graph_reasoning (complex)
+Plan       : ['graph', 'medical']
+Steps      : ["Router → capability_graph_reasoning | graph → ['medical']", 'Capability graph: 40 findings', 'Medical reasoning: 4588 chars', 'Synthesiser: answer assembled']
+Confidence : 0.50 | Halluc risk: 0.60
+Citations  : 0 fac | 4 nodes
+MLflow     : b1d12ebaf6034144851cc3694cd2ddfa
+======================================================================
+
+Answer:
+Based on the capability graph analysis, 2 of 3 facilities examined have critical capability dependency gaps. Specifically, "Beaver Medical" (facility_id: 1d0ee1ff-f69e-46da-b58d-6a3158d9d6b5) has 7 high-severity gaps, including emergency:ambulance_or_referral, emergency:oxygen, emergency:trauma_stabilization, and obstetrics:delivery_room, with a confidence level of 0.87. "Center for Cosmetic Surgery, Ghana" (facility_id: 4b0410ba-7453-45ff-aef8-a1749d9e87ba) has 3 medium-severity gaps in the surgery domain, including sterilization, blood support, and recovery beds, with a confidence level of 0.87.
+
+According to facility records, these gaps indicate a severe lack of necessary dependencies for critical services, suggesting that these facilities lack essential services and equipment for emergency, obstetric, and surgical care. The infrastructure completeness score for "Beaver Medical" is 0.222, and the healthcare maturity score is 0.267, indicating substantial deficiencies in physical infrastructure and organizational maturity.
+
+Recommended actions include:
+1. **Targeted Interventions**: Provide specific support to address the identified gaps, such as training for emergency and obstetric care, provision of essential equipment like oxygen supply and sterilization facilities, and enhancement of physical infrastructure.
+2. **Workforce Development**: Invest in workforce training and recruitment to improve the healthcare maturity and service richness of these facilities.
+3. **Infrastructure Enhancement**: Focus on improving the physical infrastructure of these facilities to support the delivery of comprehensive healthcare services.
+4. **Monitoring and Evaluation**: Regularly monitor and evaluate the progress of these facilities in addressing their capability dependency gaps and provide ongoing support as needed.
+
+An interactive map with 2 markers is ready to visualize the locations of these facilities and their respective capability gaps. (Moderate confidence)
+
+  Type     : ✅ got='capability_graph_reasoning' expected='capability_graph_reasoning'
+  Answer   : ✅ (1986 chars)
+  Cits     : 0 fac / 4 nodes
+  Quality  : conf=0.50 | halluc=0.60
+
+[6.2] 'Where is the surgical workforce actually practicing in Ghana?'
+
+======================================================================
+Query      : Where is the surgical workforce actually practicing in Ghana?
+Type       : facility_lookup (moderate)
+Plan       : ['sql', 'map']
+Steps      : ["Router → facility_lookup | sql → ['map']", 'RAG: 10 results', 'Map: 947 markers', 'Synthesiser: answer assembled']
+Confidence : 1.00 | Halluc risk: 0.10
+Citations  : 6 fac | 3 nodes
+MLflow     : 9e8c8ba4dc134cdab34ffad32c9f0313
+======================================================================
+
+Answer:
+According to facility records, 5 of 10 facilities in Ghana provide surgical services. These facilities are located in the following regions: 
+
+1. Ashanti - Christian Health Association of Ghana in Kumasi provides general surgery services.
+2. Northern - Le Mete NGO Ghana in Tamale and Ospedale Didattico di Tamale in Tamale provide general surgery, urology, and other surgical services.
+3. Western - GPHA Clinic in Takoradi provides gynecology and obstetrics, otolaryngology, and urology services.
+4. Greater Accra - FOCOS Orthopaedic Hospital Ghana in Accra provides orthopedic surgery services.
+
+Additionally, SVG Africa conducted surgeries during a health mission in the Kwahu Districts in Ghana, although the exact location of this facility is unknown.
+
+An interactive map with 947 markers is ready to provide more detailed information on the location and services of these facilities.
+
+Recommended actions: 
+- Further research is needed to determine the exact location of SVG Africa and its current surgical capabilities.
+- The Virtue Foundation may consider partnering with these facilities to support their surgical services and expand access to healthcare in Ghana.
+- Moderate confidence in the data, as some facility information may be incomplete or outdated.
+
+  Type     : ⚠️ got='facility_lookup' expected='regional_analysis'
+  Answer   : ✅ (1268 chars)
+  Cits     : 6 fac / 3 nodes
+  Quality  : conf=1.00 | halluc=0.10
+
+[7.1] 'How many ICU-capable facilities exist per region?'
+
+======================================================================
+Query      : How many ICU-capable facilities exist per region?
+Type       : regional_analysis (simple)
+Plan       : ['sql']
+Steps      : ['Router → regional_analysis | sql → []', "SQL: 11 rows | ['virtue_foundation.ghana.gold_idp_enriched']", 'Synthesiser: answer assembled']
+Confidence : 1.00 | Halluc risk: 0.30
+Citations  : 0 fac | 3 nodes
+MLflow     : a8841515ff6a48d8bb34bf7bd7be05bd
+======================================================================
+
+Answer:
+According to facility records, there are 11 regions with ICU-capable facilities in Ghana. The distribution of these facilities per region is as follows: 
+
+- 4 facilities in the Northern region
+- 5 facilities in the Volta region
+- 18 facilities in the Greater Accra region
+- 7 facilities in the Ashanti region
+- 2 facilities in the Ahafo region
+- 3 facilities in the Brong-Ahafo region
+- 3 facilities in the Eastern region
+- 2 facilities in the Western region
+- 1 facility in the Central region
+- 1 facility in the Upper West region
+- 2 facilities in the Oti region
+
+Notably, 7 of 11 regions have 5 or fewer ICU-capable facilities, with the Central and Upper West regions having the least, at 1 facility each. 
+
+An interactive map with 11 markers is ready to provide a visual representation of the distribution of ICU-capable facilities across these regions.
+
+Recommended actions: 
+1. The Virtue Foundation may consider prioritizing the Central and Upper West regions for further investment in ICU-capable facilities, given their limited capacity.
+2. The foundation could also explore opportunities to support existing facilities in regions with fewer ICU-capable facilities, such as Ahafo, Western, and Oti, to enhance their capacity and improve healthcare outcomes.
+
+  Type     : ✅ got='regional_analysis' expected='regional_analysis'
+  Answer   : ✅ (1266 chars)
+  Cits     : 0 fac / 3 nodes
+  Quality  : conf=1.00 | halluc=0.30
+
+[7.5] 'Which procedures depend on very few facilities in Ghana?'
+
+======================================================================
+Query      : Which procedures depend on very few facilities in Ghana?
+Type       : specialty_gap_analysis (moderate)
+Plan       : ['sql', 'medical']
+Steps      : ["Router → specialty_gap_analysis | sql → ['medical']", "SQL: 0 rows | ['virtue_foundation.ghana.gold_idp_enriched']", 'Medical reasoning: 4496 chars', 'Synthesiser: answer assembled']
+Confidence : 0.20 | Halluc risk: 0.50
+Citations  : 0 fac | 4 nodes
+MLflow     : 495ee92052ea4eca83e4b486017e4800
+======================================================================
+
+Answer:
+Based on our analysis of Ghana's healthcare system, we have identified several procedures that depend on very few facilities. 
+
+1. **Cardiothoracic surgery and neurosurgery**: These complex procedures are highly concentrated in a few major facilities, including the Korle Bu Teaching Hospital in Accra and the Komfo Anokye Teaching Hospital in Kumasi. According to facility records, the Korle Bu Teaching Hospital has a well-equipped ICU with a capacity of 20 beds, while the Komfo Anokye Teaching Hospital has a surgical department with 10 operating theaters.
+
+2. **Organ transplantation**: This procedure is dependent on the availability of specialized equipment and personnel at facilities like the Korle Bu Teaching Hospital and the Komfo Anokye Teaching Hospital. However, there are no other facilities in Ghana that offer this service, making these two facilities the only options for patients requiring organ transplantation.
+
+3. **Pediatric surgery and orthopedic surgery**: While the Korle Bu Teaching Hospital and the Komfo Anokye Teaching Hospital have some capacity for these procedures, there are significant gaps in the dependency chain, particularly in the rural areas of the Northern, Upper East, and Upper West regions. For example, the Tamale Teaching Hospital in the Northern Region has limited equipment and personnel to perform pediatric surgery, with only 2 operating theaters and no ICU.
+
+We have moderate confidence in these findings, based on the capability graph for Ghana's healthcare system and the clinical interpretation of facility records. 
+
+An interactive map with 10 markers is ready to visualize the distribution of these facilities and the gaps in healthcare services across Ghana.
+
+**Recommended actions**:
+
+1. **Upgrade infrastructure**: Upgrade the infrastructure of district hospitals in rural areas to include basic equipment like ultrasound machines, X-ray machines, and operating theaters.
+2. **Increase workforce**: Increase the number of doctors and nurses in rural areas to address the workforce gap.
+3. **Develop referral systems**: Develop referral systems to ensure that patients are directed to facilities that have the necessary equipment and personnel to provide specialized care.
+4. **Monitor and evaluate**: Monitor and evaluate the healthcare capabilities of facilities to prevent misrepresentation of services and ensure that patients receive accurate information about the services available.
+
+  Type     : ⚠️ got='specialty_gap_analysis' expected='regional_analysis'
+  Answer   : ✅ (2449 chars)
+  Cits     : 0 fac / 4 nodes
+  Quality  : conf=0.20 | halluc=0.50
+
+[7.6] 'Where is there oversupply of simple procedures vs scarcity of com'
+
+======================================================================
+Query      : Where is there oversupply of simple procedures vs scarcity of complex procedures?
+Type       : specialty_gap_analysis (moderate)
+Plan       : ['sql', 'medical']
+Steps      : ["Router → specialty_gap_analysis | sql → ['medical']", "SQL: 0 rows | ['virtue_foundation.ghana.gold_idp_enriched']", 'Medical reasoning: 3017 chars', 'Synthesiser: answer assembled']
+Confidence : 0.20 | Halluc risk: 0.50
+Citations  : 0 fac | 4 nodes
+MLflow     : 89535efef7184fad89ea63af643c2452
+======================================================================
+
+Answer:
+Based on our analysis of Ghana's healthcare system, we have identified regions with an oversupply of simple procedures and a scarcity of complex procedures. 
+
+7 of 17 regions in Ghana lack adequate access to complex procedures, with the Northern Region and the Upper East Region being the most affected. According to facility records, the Korle Bu Teaching Hospital in Accra and the Komfo Anokye Teaching Hospital in Kumasi have a higher concentration of complex procedures, whereas smaller district hospitals like the Cape Coast Hospital and the Tamale Teaching Hospital have a higher proportion of simple procedures.
+
+Our capability graph findings reveal a missing link between primary healthcare facilities and tertiary care centers, resulting in an uneven distribution of healthcare resources. Many district hospitals, such as the Bolgatanga Regional Hospital, lack the necessary equipment and trained personnel to perform complex procedures.
+
+The workforce and infrastructure gaps in the Northern Region and the Upper East Region exacerbate the scarcity of complex procedures. For instance, the Upper East Region has only 1.4 doctors per 100,000 people, compared to the national average of 2.5 doctors per 100,000 people.
+
+We have moderate confidence (70%) that some facilities, such as the Sunyani Regional Hospital and the Ho Teaching Hospital, may be at risk of misrepresenting their capabilities, particularly with regards to complex procedures.
+
+An interactive map with 17 markers is ready to visualize the distribution of simple and complex procedures across Ghana's regions.
+
+Recommended actions:
+
+1. **Urgent**: Support the establishment of a telemedicine platform in the Northern Region to connect patients with specialists from major teaching hospitals, addressing the scarcity of complex procedures.
+2. **High Priority**: Provide equipment and training to district hospitals in the Upper East Region and the Northern Region to enhance their capacity to perform complex procedures.
+3. **Medium Priority**: Collaborate with the Ghana Health Service to develop a referral system that ensures patients are directed to facilities with the necessary capabilities to perform complex procedures.
+
+By addressing these gaps, the Virtue Foundation can help improve access to complex procedures and reduce the oversupply of simple procedures in certain regions.
+
+  Type     : ⚠️ got='specialty_gap_analysis' expected='regional_analysis'
+  Answer   : ✅ (2365 chars)
+  Cits     : 0 fac / 4 nodes
+  Quality  : conf=0.20 | halluc=0.50
+
+[8.1] 'Generate an NGO action plan for the three most underserved region'
+
+======================================================================
+Query      : Generate an NGO action plan for the three most underserved regions
+Type       : desert_analysis (moderate)
+Plan       : ['desert', 'priority', 'medical']
+Steps      : ["Router → desert_analysis | desert → ['priority', 'medical']", 'Desert: 17 regions | 2 Severe | 2 cold spots', 'Priority: 17 regions | P1=0 P2=14', 'Medical reasoning: 3885 chars', 'Synthesiser: answer assembled']
+Confidence : 0.90 | Halluc risk: 0.30
+Citations  : 0 fac | 5 nodes
+MLflow     : 5b068f5208a14a57a906c94f34617205
+======================================================================
+
+Answer:
+**NGO Action Plan for the Three Most Underserved Regions**
+
+Based on the analysis of the medical desert scores, 3 of 17 regions are identified as the most underserved, with severe medical desert scores. The top three regions are:
+
+1. **Savannah region**: With a medical desert score of 0.8736, indicating a significant lack of healthcare facilities and services. According to facility records, the Savannah region has 0 ICU facilities, 0 surgery facilities, and 0 obstetrics facilities, with a total of 0 doctors and 0 beds.
+2. **Upper East region**: With a medical desert score of 0.8357, indicating a severe shortage of healthcare facilities and services. The region lacks critical specialties such as emergency medicine, general surgery, and gynecology and obstetrics.
+3. **Another region (not specified)**: With a medical desert score of (not specified), indicating a significant lack of healthcare facilities and services.
+
+**Recommended Actions:**
+
+For the Savannah region:
+
+1. **URGENT: Deploy emergency medicine capacity** — zero coverage detected
+2. **URGENT: No surgical capacity** — patients cannot receive operative care
+3. **URGENT: No obstetrics** — elevated maternal mortality risk
+4. **HIGH: Deploy pediatric care** — children's health services absent
+5. **URGENT: Critical physician shortage** — avg < 1 doctor per facility
+
+For the Upper East region:
+
+1. **URGENT: Deploy emergency medicine capacity** — zero coverage detected
+2. **URGENT: No surgical capacity** — patients cannot receive operative care
+3. **URGENT: No obstetrics** — elevated maternal mortality risk
+
+**Regional Priorities:**
+
+1. **Strengthen emergency stabilization, ambulance routing, and triage** — critical infrastructure gap
+2. **Perform targeted operational verification of flagged facilities** — ensure facility functionality
+3. **Deploy diagnostic, surgical, and emergency equipment** — critical infrastructure gap
+4. **Deploy rotating clinicians and specialist outreach** — urgent workforce shortage
+5. **Consider NGO mobile outreach and rotating specialist deployment programs** — address workforce shortage
+
+**Confidence Level:**
+The confidence level for these recommendations is moderate (0.5786) due to the severity of the medical desert scores and the significant gaps in healthcare services.
+
+**Interactive Map:**
+An interactive map with 3 markers is ready to visualize the locations of the most underserved regions and the recommended actions.
+
+**Next Steps:**
+
+1. Conduct further analysis to identify the third most underserved region and its specific needs.
+2. Develop a detailed implementation plan for the recommended actions, including timelines, budgets, and resource allocation.
+3. Engage with local stakeholders, including healthcare providers, community leaders, and government officials, to ensure the effectiveness and sustainability of the interventions.
+
+  Type     : ⚠️ got='desert_analysis' expected='healthcare_planning'
+  Answer   : ✅ (2868 chars)
+  Cits     : 0 fac / 5 nodes
+  Quality  : conf=0.90 | halluc=0.30
+
+========================================================================
+RESULT: 24/24 answered (100%)
+========================================================================
+Evaluation logged to MLflow ✅
+```
 
 ---
 
@@ -640,7 +1379,6 @@ virtue-foundation-ghana/
 │       ├── 02_transform_silver.ipynb       ← Dedup, standardize, geo-parse
 │       ├── 03_build_gold.ipynb             ← Geospatial join with boundaries
 │       ├── 04_idp_agent.ipynb              ← 15-phase Llama-3 IDP extraction
-│       ├── 04_idp_agent.py                 ← Python source version of IDP
 │       ├── 05_rag_build_index.ipynb        ← Embed + sync VS index + FAISS
 │       ├── 06_langgraph_agent.ipynb        ← Agent prototype sandbox
 │       ├── 07_medical_desert_scoring.ipynb ← MDS v12 composite scoring
@@ -695,9 +1433,7 @@ virtue-foundation-ghana/
 │   │       └── client.ts           ← Unified fetch wrappers + SSE consumer
 │   └── public/                     ← GIFs, screenshots, favicon
 │
-├── databricks.yml                  ← Asset Bundle config (dev + prod)
-├── cluster_config.json             ← DBR 14.3 LTS cluster specification
-└── job_serverless.json             ← Serverless workflow job definition
+└── databricks.yml                  ← Asset Bundle config (dev + prod)
 ```
 
 ---
