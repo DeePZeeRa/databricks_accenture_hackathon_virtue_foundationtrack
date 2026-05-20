@@ -224,11 +224,11 @@ When evaluating ANY region or facility, ALWAYS consider:
 
 --------------------------------------------------
 
-MANDATORY OUTPUT STRUCTURE
+PREFERRED OUTPUT STRUCTURE
 
 For ANY analytical or planning query, ALWAYS produce:
 
-### 1. Summary
+### 1. DescriptionSummary
 Short, high-impact explanation
 
 ### 2. Risk Level

@@ -90,20 +90,10 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-        # Global handler for all OPTIONS requests (CORS preflight)
-        @app.options("/{rest_of_path:path}")
-        async def preflight_handler(rest_of_path: str):
-            return JSONResponse(status_code=204, content=None)
-    # Debug middleware to log all incoming request headers (for CORS troubleshooting)
-    def add_debug_header_logger(app):
-        @app.middleware("http")
-        async def log_headers_middleware(request: Request, call_next):
-            logger.info("request_headers", path=request.url.path, method=request.method, headers=dict(request.headers))
-            return await call_next(request)
-        return app
-
+    """Create and configure the FastAPI app instance."""
     from app.core.config import settings
 
+    # Application instance
     app = FastAPI(
         title="Virtue Foundation Ghana Healthcare Intelligence API",
         description="AI-powered healthcare intelligence platform for Ghana NGO programme officers",
@@ -112,6 +102,19 @@ def create_app() -> FastAPI:
         redoc_url="/redoc" if not settings.is_production else None,
         lifespan=lifespan,
     )
+
+    # Global handler for all OPTIONS requests (CORS preflight)
+    @app.options("/{rest_of_path:path}")
+    async def preflight_handler(rest_of_path: str):
+        return JSONResponse(status_code=204, content=None)
+
+    # Debug middleware to log all incoming request headers (for CORS troubleshooting)
+    def add_debug_header_logger(app):
+        @app.middleware("http")
+        async def log_headers_middleware(request: Request, call_next):
+            logger.info("request_headers", path=request.url.path, method=request.method, headers=dict(request.headers))
+            return await call_next(request)
+        return app
 
     # Middleware stack (order matters) — ensure CORS is applied before GZip
     app.add_middleware(
