@@ -1,3 +1,40 @@
+# Virtue Foundation — Ghana Healthcare Intelligence
+
+![Virtue Foundation Ghana Healthcare Intelligence](./frontend/public/assets/cover_demo.png)
+
+> **Bridging Medical Deserts with AI, Databricks, and Agentic Intelligence**
+
+A next-generation healthcare intelligence platform that identifies "medical deserts" and connects clinical expertise to the places that need it most. Built for the Databricks + Accenture Virtue FoundationTrack hackathon, this project demonstrates an Intelligent Document Parsing (IDP) agent, RAG pipeline, and interactive dashboard for NGO planners, clinicians, and data scientists.
+
+---
+
+## 🚀 What I Built
+
+This project is a full-stack, agentic healthcare intelligence platform designed to:
+
+- **Parse and normalize messy, unstructured facility data** using an Intelligent Document Parsing (IDP) agent.
+- **Detect medical deserts** by analyzing regional gaps in clinical capabilities, equipment, and staffing.
+- **Visualize healthcare access** with interactive maps, desert heat overlays, and facility-level popups.
+- **Enable natural-language planning and audit** via an agent chat interface, supporting row-level citations for every claim.
+- **Support both Databricks and offline/FAISS modes** for flexible, robust retrieval and analytics.
+- **Empower NGOs, planners, and clinicians** to make data-driven decisions for resource allocation, intervention, and impact measurement.
+
+## 💡 How This Project Helps
+
+- **For NGOs and Planners:**
+	- Instantly identify underserved regions and prioritize interventions.
+	- Audit facility claims and spot anomalies or data inconsistencies.
+	- Plan deployments and investments with confidence, using region-level scores and facility details.
+- **For Data Scientists and Engineers:**
+	- Demonstrates scalable RAG and agentic workflows on real-world, messy data.
+	- Provides a blueprint for integrating Databricks, FAISS, and modern frontend frameworks.
+- **For Hackathon and Open Source:**
+	- Showcases best practices in full-stack AI, retrieval, and agent orchestration.
+	- Offers a ready-to-demo, extensible platform for healthcare analytics and beyond.
+
+---
+
+
 ## 🛠️ Tech Stack & Full Workflow
 
 ### Technologies Used
@@ -55,40 +92,6 @@
 	 - Environment variables control Databricks, FAISS, and Redis integration.
 	 - Health endpoints and logs provide operational visibility.
 
----
-# Virtue Foundation — Ghana Healthcare Intelligence
-
-![Virtue Foundation Ghana Healthcare Intelligence](./frontend/public/assets/cover_demo.png)
-
-> **Bridging Medical Deserts with AI, Databricks, and Agentic Intelligence**
-
-A next-generation healthcare intelligence platform that identifies "medical deserts" and connects clinical expertise to the places that need it most. Built for the Databricks + Accenture Virtue FoundationTrack hackathon, this project demonstrates an Intelligent Document Parsing (IDP) agent, RAG pipeline, and interactive dashboard for NGO planners, clinicians, and data scientists.
-
----
-
-## 🚀 What I Built
-
-This project is a full-stack, agentic healthcare intelligence platform designed to:
-
-- **Parse and normalize messy, unstructured facility data** using an Intelligent Document Parsing (IDP) agent.
-- **Detect medical deserts** by analyzing regional gaps in clinical capabilities, equipment, and staffing.
-- **Visualize healthcare access** with interactive maps, desert heat overlays, and facility-level popups.
-- **Enable natural-language planning and audit** via an agent chat interface, supporting row-level citations for every claim.
-- **Support both Databricks and offline/FAISS modes** for flexible, robust retrieval and analytics.
-- **Empower NGOs, planners, and clinicians** to make data-driven decisions for resource allocation, intervention, and impact measurement.
-
-## 💡 How This Project Helps
-
-- **For NGOs and Planners:**
-	- Instantly identify underserved regions and prioritize interventions.
-	- Audit facility claims and spot anomalies or data inconsistencies.
-	- Plan deployments and investments with confidence, using region-level scores and facility details.
-- **For Data Scientists and Engineers:**
-	- Demonstrates scalable RAG and agentic workflows on real-world, messy data.
-	- Provides a blueprint for integrating Databricks, FAISS, and modern frontend frameworks.
-- **For Hackathon and Open Source:**
-	- Showcases best practices in full-stack AI, retrieval, and agent orchestration.
-	- Offers a ready-to-demo, extensible platform for healthcare analytics and beyond.
 
 ---
 
