@@ -1,5 +1,7 @@
 // src/api/client.ts — complete API client with SSE streaming support
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// Normalize BASE and remove trailing slash
+const RAW_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const BASE = RAW_BASE.replace(/\/$/, '')
 
 // ── Type Definitions ──────────────────────────────────────────────────────────
 
@@ -325,17 +327,36 @@ export interface HealthStatus {
 // ── HTTP Helper ────────────────────────────────────────────────────────────────
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<{ data: T; dataSource: string }> {
-  const res = await fetch(`${BASE}${path}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-  })
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`API ${res.status}: ${text || res.statusText}`)
+  try {
+    // Mixed-content check: browser will block http requests from https pages
+    if (typeof window !== 'undefined' && window.location && BASE.startsWith('http://') && window.location.protocol === 'https:') {
+      throw new Error(
+        `Blocked mixed content: frontend served over https but API BASE is http (${BASE}). Use https or update VITE_API_URL.`
+      )
+    }
+
+    const res = await fetch(`${BASE}${path}`, {
+      ...options,
+      headers: { 'Content-Type': 'application/json', ...options?.headers },
+    })
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`API ${res.status}: ${text || res.statusText}`)
+    }
+    const data = await res.json()
+    const dataSource = res.headers.get('X-Data-Source') || 'databricks'
+    return { data, dataSource }
+  } catch (err: unknown) {
+    const e = err as Error
+    // Give actionable hint for network/CORS/mixed-content issues
+    if (e.message && (e.message.includes('Failed to fetch') || e.message.includes('NetworkError') || e.message.includes('Blocked mixed content')) ) {
+      throw new Error(
+        `${e.message}. Check that VITE_API_URL is set correctly (current: ${BASE}), the backend is reachable, and CORS allows the frontend origin.`
+      )
+    }
+    throw e
   }
-  const data = await res.json()
-  const dataSource = res.headers.get('X-Data-Source') || 'databricks'
-  return { data, dataSource }
 }
 
 // ── Health ────────────────────────────────────────────────────────────────────
@@ -456,6 +477,12 @@ export function createSSEStream(
 
   const run = async () => {
     try {
+      // Mixed-content / environment checks before attempting fetch
+      if (typeof window !== 'undefined' && window.location && BASE.startsWith('http://') && window.location.protocol === 'https:') {
+        onError(`Blocked mixed content: frontend over https but API BASE=${BASE} is http. Set VITE_API_URL to an https endpoint.`)
+        return
+      }
+
       const res = await fetch(`${BASE}/api/v1/agent/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -464,7 +491,8 @@ export function createSSEStream(
       })
 
       if (!res.ok || !res.body) {
-        onError(`HTTP ${res.status}: ${res.statusText}`)
+        const text = await res.text().catch(() => '')
+        onError(`HTTP ${res.status}: ${text || res.statusText}`)
         return
       }
 

@@ -90,6 +90,10 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+        # Global handler for all OPTIONS requests (CORS preflight)
+        @app.options("/{rest_of_path:path}")
+        async def preflight_handler(rest_of_path: str):
+            return JSONResponse(status_code=204, content=None)
     # Debug middleware to log all incoming request headers (for CORS troubleshooting)
     def add_debug_header_logger(app):
         @app.middleware("http")
