@@ -17,6 +17,7 @@ from app.agents.nodes import (
     ngo_node,
     synthesiser_node,
 )
+from app.agents.web_search import web_search_node
 
 logger = structlog.get_logger(__name__)
 
@@ -35,6 +36,7 @@ def _build_graph() -> StateGraph:
     builder.add_node("medical_reason", medical_node)
     builder.add_node("planning_sys", planning_node)
     builder.add_node("ngo_search", ngo_node)
+    builder.add_node("web_search", web_search_node)
     builder.add_node("synthesiser", synthesiser_node)
 
     # Set entry point
@@ -53,6 +55,7 @@ def _build_graph() -> StateGraph:
             "medical_reason": "medical_reason",
             "planning_sys": "planning_sys",
             "ngo_search": "ngo_search",
+            "web_search": "web_search",
             "synthesiser": "synthesiser",
         },
     )
@@ -72,13 +75,13 @@ def _build_graph() -> StateGraph:
 
     # All secondary nodes go straight to synthesiser
     for node in ["rag_search", "geo_calc", "anomaly_check", "desert_check",
-                 "medical_reason", "planning_sys", "ngo_search"]:
+                 "medical_reason", "planning_sys", "ngo_search", "web_search"]:
         builder.add_edge(node, "synthesiser")
 
     builder.add_edge("synthesiser", END)
 
     graph = builder.compile()
-    logger.info("langgraph_compiled", nodes=10)
+    logger.info("langgraph_compiled", nodes=11)
     return graph
 
 
@@ -88,6 +91,11 @@ def _route_after_router(state: AgentState) -> str:
     if not sub_agents:
         return "synthesiser"
     first = sub_agents[0]
+
+    # If router chose web_search but toggle is off, go straight to synthesiser
+    if first == "web" and not state.get("use_web_search", False):
+        return "synthesiser"
+
     _MAP = {
         "sql": "sql_query",
         "rag": "rag_search",
@@ -97,6 +105,7 @@ def _route_after_router(state: AgentState) -> str:
         "medical": "medical_reason",
         "planning": "planning_sys",
         "ngo": "ngo_search",
+        "web": "web_search",
         "synthesiser": "synthesiser",
     }
     return _MAP.get(first, "synthesiser")

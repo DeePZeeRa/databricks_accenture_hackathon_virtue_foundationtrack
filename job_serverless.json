@@ -1,0 +1,12 @@
+{
+  "name": "bronze-ingestion-job",
+  "tasks": [
+    {
+      "task_key": "bronze_ingestion",
+      "notebook_task": {
+        "notebook_path": "/Workspace/Users/dasdeepayan08@gmail.com/01_ingest_bronze_v2"
+      },
+      "timeout_seconds": 3600
+    }
+  ]
+}

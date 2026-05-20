@@ -33,6 +33,7 @@ def _build_chunk(chunk_type: str, content: str, metadata: dict | None = None) ->
 async def stream_agent_response(
     query: str,
     session_id: str = "default",
+    web_search_enabled: bool = False,
 ) -> AsyncGenerator[str, None]:
     """
     Stream agent response chunks as SSE events.
@@ -63,6 +64,7 @@ async def stream_agent_response(
             "query": query,
             "session_id": session_id,
             "chat_history": history_context,
+            "use_web_search": web_search_enabled,
             "sub_agents": [],
             "query_type": "",
             "errors": [],
@@ -160,6 +162,26 @@ async def stream_agent_response(
                             node_state.get("action_plan", ""),
                         ))
 
+                    elif node_name == "ngo_search":
+                        ngo = node_state.get("ngo_results", [])
+                        chunk_queue.put(_build_chunk(
+                            "ngo_result",
+                            f"Found {len(ngo)} NGO facilities",
+                            {"count": len(ngo), "facilities": ngo[:5]},
+                        ))
+
+                    elif node_name == "web_search":
+                        web = node_state.get("web_results", [])
+                        chunk_queue.put(_build_chunk(
+                            "web_result",
+                            f"Web search returned {len(web)} results for: {node_state.get('web_search_query', '')}",
+                            {
+                                "count": len(web),
+                                "query": node_state.get("web_search_query", ""),
+                                "results": web[:5],
+                            },
+                        ))
+
                     elif node_name == "synthesiser":
                         elapsed = round(time.monotonic() - start_time, 2)
                         answer = node_state.get("answer", "")
@@ -231,7 +253,7 @@ async def stream_agent_response(
             future.cancel()
 
 
-async def invoke_agent_sync(query: str, session_id: str = "default") -> dict:
+async def invoke_agent_sync(query: str, session_id: str = "default", web_search_enabled: bool = False) -> dict:
     """Run agent non-streaming — returns complete state."""
     from app.agents.graph import VIRTUE_AGENT
     from app.core.config import settings
@@ -249,6 +271,7 @@ async def invoke_agent_sync(query: str, session_id: str = "default") -> dict:
         "query": query,
         "session_id": session_id,
         "chat_history": history_context,
+        "use_web_search": web_search_enabled,
         "sub_agents": [],
         "query_type": "",
         "errors": [],

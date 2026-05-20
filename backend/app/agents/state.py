@@ -51,6 +51,12 @@ class AgentState(TypedDict, total=False):
     # NGO node
     ngo_results: list[dict]
 
+    # Web search node
+    use_web_search: bool    # controlled by frontend toggle
+    web_results: list[dict]
+    web_search_query: str
+
+
     # Synthesiser
     answer: str
     citations: list[dict]

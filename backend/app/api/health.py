@@ -32,7 +32,7 @@ async def health_check() -> JSONResponse:
     db_ok, cache_ok = await asyncio.gather(_db_check(), _cache_check())
     faiss_ok = FAISSIndexManager._loaded
 
-    all_ok = db_ok and faiss_ok  # cache is optional
+    all_ok = db_ok  # FAISS is optional RAG — only Databricks is core
     status = "healthy" if all_ok else "degraded"
 
     return JSONResponse(

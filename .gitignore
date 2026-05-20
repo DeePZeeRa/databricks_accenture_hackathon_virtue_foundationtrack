@@ -1,6 +1,10 @@
+# Secrets — never commit
 .env
-.env.*
+backend/.env
+
+# Allow example/template files
 !*.env.example
+!frontend/.env.production
 node_modules/
 dist/
 build/
@@ -16,5 +20,18 @@ venv/
 graphify-out/
 scirpts/
 .agent/
+.agents
+.ai-dev-kit
+.codex
 .cursor/
 .github/
+.databricks
+graphify_update_all.py
+databricks.yml
+.graphify_analysis.json
+.graphify_extract.json
+.graphify_incremental.json
+.graphify_old.json
+graphify_run/
+scripts
+.vscode

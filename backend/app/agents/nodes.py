@@ -39,13 +39,21 @@ SPEC_MAP = {
 
 
 def _run_async(coro):
-    """Run an async coroutine from a sync context (inside a thread)."""
+    """Run an async coroutine safely from a sync thread (e.g. LangGraph worker)."""
+    import concurrent.futures
+    # Is there a running event loop somewhere (e.g. the main uvicorn loop)?
     try:
         loop = asyncio.get_event_loop()
-        if loop.is_closed():
-            raise RuntimeError("closed")
-        return loop.run_until_complete(coro)
     except RuntimeError:
+        loop = None
+
+    if loop is not None and loop.is_running():
+        # We're in a worker thread — schedule the coroutine on the running loop
+        # and block until it finishes.
+        future = asyncio.run_coroutine_threadsafe(coro, loop)
+        return future.result(timeout=60)
+    else:
+        # No running loop — safe to use asyncio.run()
         return asyncio.run(coro)
 
 
@@ -77,6 +85,8 @@ def router_node(state: AgentState) -> AgentState:
         query_type = "ngo"; sub_agents = ["sql", "ngo"]
     elif any(w in query for w in ["why", "clinical", "treat", "patient", "mortality", "risk"]):
         query_type = "medical"; sub_agents = ["rag", "medical"]
+    elif any(w in query for w in ["who", "who guideline", "global", "international", "research", "study", "news", "latest", "external", "worldwide", "united nations", "unicef", "world bank"]):
+        query_type = "web"; sub_agents = ["web"]
     else:
         query_type = "sql"; sub_agents = ["sql"]
 
@@ -497,6 +507,9 @@ def router_node(state: AgentState) -> AgentState:
     elif any(w in query for w in ["why", "clinical", "treat", "patient", "mortality", "risk"]):
         query_type = "medical"
         sub_agents = ["rag", "medical"]
+    elif any(w in query for w in ["who guideline", "global", "international", "research", "study", "news", "latest", "external", "worldwide", "united nations", "unicef", "world bank", "who "]):
+        query_type = "web"
+        sub_agents = ["web"]
     else:
         query_type = "sql"
         sub_agents = ["sql"]
@@ -926,6 +939,11 @@ def synthesiser_node(state: AgentState) -> AgentState:
     if state.get("ngo_results"):
         context.append(f"\nNGO FACILITIES: {len(state['ngo_results'])} found")
 
+    if state.get("web_results"):
+        context.append(f"\nWEB SEARCH RESULTS (query: '{state.get('web_search_query', '')}'):")
+        for w in state["web_results"][:5]:
+            context.append(f"- [{w.get('source','')}] {w.get('title','')}: {truncate(w.get('snippet',''), 200)} (URL: {w.get('url','')})") 
+
     context.append("\nErrors during processing: " + str(state.get("errors", [])))
 
     full_context = "\n".join(context)
@@ -980,6 +998,7 @@ def route_after_router(state: AgentState) -> str:
         "medical": "medical_reason",
         "planning": "planning_sys",
         "ngo": "ngo_search",
+        "web": "web_search",
         "synthesiser": "synthesiser",
     }
     return NODE_MAP.get(next_agent, "synthesiser")

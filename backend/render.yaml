@@ -1,11 +1,15 @@
 services:
   - type: web
     name: virtue-foundation-api
-    runtime: python311
+    runtime: python
+    rootDir: backend
+    healthCheckPath: /health
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 120
-    autoDeploy: false
+    autoDeploy: true
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
       - key: DATABRICKS_HOST
         sync: false
       - key: DATABRICKS_TOKEN
@@ -37,7 +41,7 @@ services:
       - key: SECRET_KEY
         sync: false
       - key: API_KEYS
-        sync: false
+        value: ""
       - key: CORS_ORIGINS
         sync: false
       - key: RATE_LIMIT_PER_MINUTE
@@ -50,5 +54,3 @@ services:
         value: production
       - key: MLFLOW_TRACKING_URI
         value: databricks
-      - key: PYTHON_VERSION
-        value: "3.11.9"

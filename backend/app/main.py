@@ -174,3 +174,6 @@ def create_app() -> FastAPI:
 
 app = create_app()
 #  python3.14 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+# http://localhost:8000/docs
+
+# .venv\Scripts\uvicorn.exe app.main:app --host 0.0.0.0 --port 8000 --reload

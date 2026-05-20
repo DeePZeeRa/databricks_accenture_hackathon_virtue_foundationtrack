@@ -29,3 +29,18 @@ async def get_anomaly_summary():
     ds = {}
     data = await SQLQueryService.get_anomaly_summary(data_source_header=ds)
     return JSONResponse(content=data, headers={"X-Data-Source": ds.get("source", "databricks")})
+
+
+@router.get("/anomalies/regional-priority")
+async def get_anomalies_regional_priority():
+    """Return regional priority rankings from gold_regional_priority.
+
+    Convenience alias of /api/v1/regions/priority — useful for anomaly-focused
+    consumers who already import the anomaly router.
+    """
+    ds = {}
+    data = await SQLQueryService.get_regional_priority(data_source_header=ds)
+    return JSONResponse(
+        content={"data": data, "total": len(data), "dataSource": ds.get("source", "databricks")},
+        headers={"X-Data-Source": ds.get("source", "databricks")},
+    )

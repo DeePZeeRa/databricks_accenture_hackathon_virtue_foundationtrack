@@ -197,6 +197,7 @@ class SQLQueryService:
                 e.officialWebsite AS official_website,
                 e.source_url,
                 e.description,
+                e.organizationdescription,
                 e.yearestablished AS year_established,
                 e.capability_is_valid,
                 e.capability_confidence,
@@ -354,7 +355,8 @@ class SQLQueryService:
             DatabricksQueryExecutor.execute(
                 f"""SELECT COUNT(*) AS critical_desert_regions
                 FROM {CATALOG}.gold_medical_desert_scores
-                WHERE mds_label IN ('Critical Desert', 'Severe Desert')""",
+                WHERE desert_label IN ('Severe Desert', 'Moderate Desert')
+                   OR mds_label IN ('Critical Desert', 'Severe Desert', 'Moderate Desert')""",
                 max_rows=1,
             ),
             DatabricksQueryExecutor.execute(
@@ -390,7 +392,7 @@ class SQLQueryService:
         if cached:
             return cached
         rows = await DatabricksQueryExecutor.execute(
-            f"SELECT DISTINCT region_normalised FROM {CATALOG}.gold_idp_enriched WHERE region_normalised IS NOT NULL ORDER BY region_normalised"
+            f"SELECT DISTINCT region_normalised FROM {CATALOG}.gold_facilities_enriched WHERE region_normalised IS NOT NULL ORDER BY region_normalised"
         )
         regions = [r["region_normalised"] for r in rows if r.get("region_normalised")]
         await CacheService.set(cache_key, regions, ttl=3600)
@@ -532,25 +534,52 @@ class SQLQueryService:
 
         rows = await DatabricksQueryExecutor.execute(
             f"""SELECT unique_id, name, city_clean, region_normalised,
-                facility_type_clean, latitude, longitude,
-                total_anomaly_flags, anomaly_risk_level,
+                facility_type_clean, facility_tier_label, service_maturity_label,
+                latitude, longitude,
+                total_anomaly_flags, composite_anomaly_score, anomaly_risk_level,
+                ghost_probability_score, ghost_review_priority,
+                quality_risk_score, clinical_risk_score, operational_risk_score, integrity_risk_score,
+                continuity_risk_score, continuity_risk_flags, high_continuity_risk,
+                emergency_readiness_score, critical_care_score,
+                service_richness_score, infrastructure_completeness_score,
+                referral_complexity_score, healthcare_maturity_score,
+                data_poverty_flag,
                 llm_priority_action, llm_data_quality_score,
                 llm_confirmed_anomaly_count, llm_anomaly_severity,
                 llm_clinical_assessment, llm_false_positive_reason,
+                llm_recommended_quality_category,
                 stat_anomaly_capability_inflation, stat_anomaly_hospital_no_doctors,
                 stat_anomaly_clinic_claims_icu, stat_anomaly_ghost_facility,
                 stat_anomaly_procedure_breadth, stat_anomaly_specialty_mismatch,
                 enhanced_procedures_no_equipment, enhanced_ghost_hospital,
                 enhanced_type_capability_mismatch, enhanced_low_idp_confidence,
                 enhanced_suspicious_completeness, enhanced_icu_no_infrastructure,
+                enhanced_implausible_doctor_bed_ratio, enhanced_em_without_surgical_support,
+                enhanced_high_quality_risk, enhanced_peer_capability_outlier,
+                enhanced_maturity_infra_mismatch, enhanced_graph_dependency_gap,
+                enhanced_richness_equipment_mismatch,
+                capability_dependency_gaps, capability_graph_summary,
+                peer_capability_zscore, peer_outlier_high_cap, peer_outlier_low_equip,
+                quality_flag_taxonomy,
                 data_completeness_score, capability_confidence, capability_is_valid,
-                medical_desert_score, desert_label
+                medical_desert_score, desert_label,
+                specialties_enriched, capability_enriched, procedure_enriched,
+                capability_anomalies,
+                number_doctors_int, capacity_int
             FROM {CATALOG}.gold_anomaly_flags
             {where_clause}
-            ORDER BY total_anomaly_flags DESC NULLS LAST, llm_data_quality_score ASC NULLS LAST
+            ORDER BY total_anomaly_flags DESC NULLS LAST, composite_anomaly_score DESC NULLS LAST
             LIMIT {limit} OFFSET {offset}""",
             params, max_rows=limit,
         )
+        for row in rows:
+            for col in ["specialties_enriched", "capability_enriched", "procedure_enriched",
+                        "capability_anomalies", "continuity_risk_flags"]:
+                row[col] = _parse_json_col(row.get(col))
+            if row.get("capability_graph_summary"):
+                row["capability_graph_summary"] = _parse_json_col(row.get("capability_graph_summary"), {})
+            if row.get("capability_dependency_gaps"):
+                row["capability_dependency_gaps"] = _parse_json_col(row.get("capability_dependency_gaps"))
 
         result = {"total": total, "items": rows}
         await CacheService.set(cache_key, result, ttl=300)
@@ -579,7 +608,28 @@ class SQLQueryService:
                     SUM(CASE WHEN stat_anomaly_clinic_claims_icu THEN 1 ELSE 0 END) AS clinic_claims_icu,
                     SUM(CASE WHEN stat_anomaly_ghost_facility THEN 1 ELSE 0 END) AS ghost_facility,
                     SUM(CASE WHEN stat_anomaly_procedure_breadth THEN 1 ELSE 0 END) AS procedure_breadth,
-                    SUM(CASE WHEN stat_anomaly_specialty_mismatch THEN 1 ELSE 0 END) AS specialty_mismatch
+                    SUM(CASE WHEN stat_anomaly_specialty_mismatch THEN 1 ELSE 0 END) AS specialty_mismatch,
+                    SUM(CASE WHEN enhanced_type_capability_mismatch THEN 1 ELSE 0 END) AS enhanced_type_capability_mismatch,
+                    SUM(CASE WHEN enhanced_ghost_hospital THEN 1 ELSE 0 END) AS enhanced_ghost_hospital,
+                    SUM(CASE WHEN enhanced_procedures_no_equipment THEN 1 ELSE 0 END) AS enhanced_procedures_no_equipment,
+                    SUM(CASE WHEN enhanced_low_idp_confidence THEN 1 ELSE 0 END) AS enhanced_low_idp_confidence,
+                    SUM(CASE WHEN enhanced_suspicious_completeness THEN 1 ELSE 0 END) AS enhanced_suspicious_completeness,
+                    SUM(CASE WHEN enhanced_icu_no_infrastructure THEN 1 ELSE 0 END) AS enhanced_icu_no_infrastructure,
+                    SUM(CASE WHEN enhanced_implausible_doctor_bed_ratio THEN 1 ELSE 0 END) AS enhanced_implausible_doctor_bed_ratio,
+                    SUM(CASE WHEN enhanced_em_without_surgical_support THEN 1 ELSE 0 END) AS enhanced_em_without_surgical_support,
+                    SUM(CASE WHEN enhanced_high_quality_risk THEN 1 ELSE 0 END) AS enhanced_high_quality_risk,
+                    SUM(CASE WHEN enhanced_peer_capability_outlier THEN 1 ELSE 0 END) AS enhanced_peer_capability_outlier,
+                    SUM(CASE WHEN enhanced_maturity_infra_mismatch THEN 1 ELSE 0 END) AS enhanced_maturity_infra_mismatch,
+                    SUM(CASE WHEN enhanced_graph_dependency_gap THEN 1 ELSE 0 END) AS enhanced_graph_dependency_gap,
+                    SUM(CASE WHEN enhanced_richness_equipment_mismatch THEN 1 ELSE 0 END) AS enhanced_richness_equipment_mismatch,
+                    SUM(CASE WHEN data_poverty_flag THEN 1 ELSE 0 END) AS data_poverty_count,
+                    SUM(CASE WHEN high_continuity_risk THEN 1 ELSE 0 END) AS high_continuity_risk_count,
+                    ROUND(AVG(composite_anomaly_score), 4) AS avg_composite_score,
+                    ROUND(AVG(ghost_probability_score), 4) AS avg_ghost_probability,
+                    ROUND(AVG(clinical_risk_score), 4) AS avg_clinical_risk,
+                    ROUND(AVG(quality_risk_score), 4) AS avg_quality_risk,
+                    ROUND(AVG(emergency_readiness_score), 4) AS avg_emergency_readiness,
+                    ROUND(AVG(healthcare_maturity_score), 4) AS avg_healthcare_maturity
                 FROM {CATALOG}.gold_anomaly_flags"""
             ),
             DatabricksQueryExecutor.execute(
@@ -590,21 +640,87 @@ class SQLQueryService:
                 ORDER BY cnt DESC
                 LIMIT 10"""
             ),
+            DatabricksQueryExecutor.execute(
+                f"""SELECT anomaly_risk_level,
+                    ROUND(AVG(composite_anomaly_score), 4) AS avg_score,
+                    ROUND(AVG(ghost_probability_score), 4) AS avg_ghost,
+                    COUNT(*) AS cnt
+                FROM {CATALOG}.gold_anomaly_flags
+                WHERE anomaly_risk_level != 'CLEAN'
+                GROUP BY anomaly_risk_level
+                ORDER BY avg_score DESC"""
+            ),
         )
 
         by_risk = {r["anomaly_risk_level"]: r["cnt"] for r in results[0]}
         type_counts = results[1][0] if results[1] else {}
         worst_regions = {r["region_normalised"]: r["cnt"] for r in results[2]}
+        risk_stats = {r["anomaly_risk_level"]: {
+            "avg_score": r["avg_score"],
+            "avg_ghost": r["avg_ghost"],
+            "count": r["cnt"],
+        } for r in results[3]}
 
         summary = {
             "by_risk_level": by_risk,
             "anomaly_type_counts": type_counts,
             "worst_regions": worst_regions,
+            "risk_stats": risk_stats,
+            "global_stats": {
+                "avg_composite_score": type_counts.get("avg_composite_score"),
+                "avg_ghost_probability": type_counts.get("avg_ghost_probability"),
+                "avg_clinical_risk": type_counts.get("avg_clinical_risk"),
+                "avg_quality_risk": type_counts.get("avg_quality_risk"),
+                "avg_emergency_readiness": type_counts.get("avg_emergency_readiness"),
+                "avg_healthcare_maturity": type_counts.get("avg_healthcare_maturity"),
+                "data_poverty_count": type_counts.get("data_poverty_count", 0),
+                "high_continuity_risk_count": type_counts.get("high_continuity_risk_count", 0),
+            },
         }
         await CacheService.set(cache_key, summary, ttl=600)
         if data_source_header is not None:
             data_source_header["source"] = "databricks"
         return summary
+
+    @staticmethod
+    async def get_regional_priority(data_source_header: Optional[dict] = None) -> list[dict]:
+        """Fetch gold_regional_priority — ranked regions for NGO intervention."""
+        cache_key = "regional:priority"
+        cached = await CacheService.get(cache_key)
+        if cached:
+            if data_source_header is not None:
+                data_source_header["source"] = "cache"
+            return cached
+
+        rows = await DatabricksQueryExecutor.execute(
+            f"""SELECT
+                region_normalised,
+                facility_count,
+                avg_desert_score,
+                avg_emergency_gap,
+                avg_continuity_fragility,
+                avg_anomaly_density,
+                avg_low_staff_density,
+                avg_low_equipment_density,
+                critical_facility_count,
+                high_risk_facility_count,
+                high_continuity_risk_count,
+                avg_emergency_readiness,
+                avg_data_completeness,
+                regional_priority_score,
+                priority_tier,
+                recommended_interventions
+            FROM {CATALOG}.gold_regional_priority
+            ORDER BY regional_priority_score DESC NULLS LAST""",
+            max_rows=20,
+        )
+        for row in rows:
+            row["recommended_interventions"] = _parse_json_col(row.get("recommended_interventions"))
+
+        await CacheService.set(cache_key, rows, ttl=900)
+        if data_source_header is not None:
+            data_source_header["source"] = "databricks"
+        return rows
 
     @staticmethod
     async def execute_agent_sql(sql: str) -> list[dict]:

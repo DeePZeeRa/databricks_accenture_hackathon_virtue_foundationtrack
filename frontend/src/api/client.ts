@@ -43,6 +43,7 @@ export interface Facility {
   color?: string
   specialties_enriched?: string[]
   idp_citations?: string[]
+  mds_label?: string
 }
 
 export interface FacilityDetail extends Facility {
@@ -53,6 +54,7 @@ export interface FacilityDetail extends Facility {
   capability_enriched?: string[]
   specialties_enriched?: string[]
   description?: string
+  organizationdescription?: string
   address_line1?: string
   address_line2?: string
   address_line3?: string
@@ -143,24 +145,83 @@ export interface AnomalyRecord {
   city_clean?: string
   region_normalised?: string
   facility_type_clean?: string
+  facility_tier_label?: string
+  service_maturity_label?: string
+  latitude?: number
+  longitude?: number
+  number_doctors_int?: number
+  capacity_int?: number
+  // Core anomaly scoring
   total_anomaly_flags?: number
+  composite_anomaly_score?: number
   anomaly_risk_level?: string
+  // Ghost & data poverty
+  ghost_probability_score?: number
+  ghost_review_priority?: string
+  data_poverty_flag?: boolean
+  // Risk dimensions
+  quality_risk_score?: number
+  clinical_risk_score?: number
+  operational_risk_score?: number
+  integrity_risk_score?: number
+  // Continuity
+  continuity_risk_score?: number
+  continuity_risk_flags?: string[]
+  high_continuity_risk?: boolean
+  // Readiness scores
+  emergency_readiness_score?: number
+  critical_care_score?: number
+  service_richness_score?: number
+  infrastructure_completeness_score?: number
+  referral_complexity_score?: number
+  healthcare_maturity_score?: number
+  // LLM outputs
   llm_priority_action?: string
   llm_data_quality_score?: number
+  llm_confirmed_anomaly_count?: number
   llm_anomaly_severity?: string
   llm_clinical_assessment?: string
   llm_false_positive_reason?: string
+  llm_recommended_quality_category?: string
+  // Stat anomaly flags
   stat_anomaly_capability_inflation?: boolean
   stat_anomaly_hospital_no_doctors?: boolean
   stat_anomaly_clinic_claims_icu?: boolean
   stat_anomaly_ghost_facility?: boolean
   stat_anomaly_procedure_breadth?: boolean
   stat_anomaly_specialty_mismatch?: boolean
-  enhanced_procedures_no_equipment?: boolean
+  // Enhanced ML anomaly flags
+  enhanced_type_capability_mismatch?: boolean
   enhanced_ghost_hospital?: boolean
+  enhanced_procedures_no_equipment?: boolean
+  enhanced_low_idp_confidence?: boolean
+  enhanced_suspicious_completeness?: boolean
+  enhanced_icu_no_infrastructure?: boolean
+  enhanced_implausible_doctor_bed_ratio?: boolean
+  enhanced_em_without_surgical_support?: boolean
+  enhanced_high_quality_risk?: boolean
+  enhanced_peer_capability_outlier?: boolean
+  enhanced_maturity_infra_mismatch?: boolean
+  enhanced_graph_dependency_gap?: boolean
+  enhanced_richness_equipment_mismatch?: boolean
+  // Peer / graph analysis
+  capability_dependency_gaps?: string[]
+  capability_graph_summary?: Record<string, unknown>
+  peer_capability_zscore?: number
+  peer_outlier_high_cap?: boolean
+  peer_outlier_low_equip?: boolean
+  quality_flag_taxonomy?: string
+  // Data quality
   data_completeness_score?: number
+  capability_confidence?: number
+  capability_is_valid?: boolean
   medical_desert_score?: number
   desert_label?: string
+  // Enriched lists (for problems/actions view)
+  specialties_enriched?: string[]
+  capability_enriched?: string[]
+  procedure_enriched?: string[]
+  capability_anomalies?: string[]
 }
 
 export interface FacilityStats {
@@ -178,7 +239,8 @@ export interface FacilityStats {
 export interface StreamingChunk {
   chunk_type: 'thinking' | 'sql_result' | 'rag_result' | 'geo_result' |
   'anomaly_result' | 'desert_result' | 'medical_reasoning' |
-  'planning' | 'final_answer' | 'citations' | 'done' | 'error'
+  'planning' | 'ngo_result' | 'web_result' |
+  'final_answer' | 'citations' | 'done' | 'error'
   content: string
   metadata?: Record<string, unknown>
   timestamp: string
@@ -217,6 +279,37 @@ export interface StepCitation {
   output_data: string
   data_sources: string[]
   timestamp: number
+}
+
+export interface RegionalPriority {
+  region_normalised: string
+  // actual gold_regional_priority columns
+  facility_count?: number
+  avg_desert_score?: number
+  avg_emergency_gap?: number
+  avg_continuity_fragility?: number
+  avg_anomaly_density?: number
+  avg_ghost_density?: number
+  avg_low_infra_density?: number
+  avg_low_staff_density?: number
+  avg_low_equipment_density?: number
+  avg_low_maturity_density?: number
+  critical_facility_count?: number
+  high_risk_facility_count?: number
+  high_continuity_risk_count?: number
+  avg_emergency_readiness?: number
+  avg_data_completeness?: number
+  regional_priority_score?: number
+  priority_tier?: string
+  recommended_interventions?: string[]
+}
+
+export interface WebResult {
+  title: string
+  snippet: string
+  url: string
+  source: string
+  timestamp?: number
 }
 
 export interface HealthStatus {
@@ -341,6 +434,13 @@ export async function getAnomalySummary(): Promise<Record<string, unknown>> {
   return data
 }
 
+// ── Regional Priority ──────────────────────────────────────────────────────────
+
+export async function getRegionalPriority(): Promise<{ data: RegionalPriority[]; dataSource: string }> {
+  const { data, dataSource } = await apiFetch<RegionalPriority[]>('/api/v1/regions/priority')
+  return { data, dataSource }
+}
+
 // ── Agent Streaming ────────────────────────────────────────────────────────────
 
 export function createSSEStream(
@@ -349,6 +449,7 @@ export function createSSEStream(
   onChunk: (chunk: StreamingChunk) => void,
   onDone: () => void,
   onError: (error: string) => void,
+  webSearchEnabled: boolean = false,
 ): () => void {
   const controller = new AbortController()
   let done = false
@@ -358,7 +459,7 @@ export function createSSEStream(
       const res = await fetch(`${BASE}/api/v1/agent/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, session_id: sessionId, stream: true }),
+        body: JSON.stringify({ query, session_id: sessionId, stream: true, web_search_enabled: webSearchEnabled }),
         signal: controller.signal,
       })
 

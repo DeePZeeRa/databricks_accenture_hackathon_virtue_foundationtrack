@@ -1,3 +1,4 @@
+# ── Core Web Framework ────────────────────────────────────────────────────────
 fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
 pydantic>=2.10.0
@@ -9,36 +10,27 @@ orjson>=3.10.0
 aiofiles>=24.1.0
 python-multipart>=0.0.19
 
-# Databricks SQL connector
+# ── Databricks SQL Connector ──────────────────────────────────────────────────
 databricks-sql-connector>=3.4.0
 
-# Caching (optional — app works without)
+# ── Caching (optional — app works without Redis) ──────────────────────────────
 upstash-redis>=1.3.0
 
-# Pandas for data manipulation
+# ── Data Processing ───────────────────────────────────────────────────────────
 pandas>=2.2.0
+numpy>=1.26.0
 
-# LangGraph / LangChain
+# ── LangGraph / LangChain (AI Agent) ─────────────────────────────────────────
 langchain>=0.3.0
 langgraph>=0.2.0
 langchain-core>=0.3.0
 
-# FAISS (optional — semantic search disabled if not installed)
-# faiss-cpu is not yet available for Python 3.14
-# Install manually if using Python 3.11/3.12:
-#   pip install faiss-cpu
-# For now, FAISS is optional and the app degrades gracefully without it.
+# ── FAISS Semantic Search (Python 3.11 compatible) ───────────────────────────
+faiss-cpu>=1.8.0
 
-# NumPy (for FAISS operations)
-numpy>=1.26.0
-
-# Security
+# ── Security ──────────────────────────────────────────────────────────────────
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
 
-# Rate limiting
+# ── Rate Limiting ─────────────────────────────────────────────────────────────
 slowapi>=0.1.9
-
-# Testing
-pytest>=8.0.0
-pytest-asyncio>=0.24.0

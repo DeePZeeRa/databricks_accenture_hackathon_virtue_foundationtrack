@@ -1,0 +1,5 @@
+# Dev-only dependencies — NOT used in production (Render) builds
+-r requirements.txt
+
+pytest>=8.0.0
+pytest-asyncio>=0.24.0

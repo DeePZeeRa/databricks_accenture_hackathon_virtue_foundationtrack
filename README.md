@@ -51,26 +51,20 @@ Set these in `backend/.env` locally and in the backend Vercel project settings f
 
 Rotate any Databricks token that was previously committed or copied into an example file.
 
-## Split Vercel Deployment
+## Deployment
 
-Backend project:
+The project is ready for a free split deployment:
 
-- Root directory: `backend`
-- Framework: Other / Python
-- Build command: default
-- Output directory: default
-- Entry function: `api/index.py`
-- Add all backend env vars above.
+- Frontend: Vercel static hosting from the `frontend` folder
+- Backend: Render free web service from the `backend` folder
 
-Frontend project:
+Use the step-by-step guide in [DEPLOYMENT.md](DEPLOYMENT.md) for the exact sequence, required environment variables, and verification checks.
 
-- Root directory: `frontend`
-- Build command: `npm run build`
-- Output directory: `dist`
-- Env: `VITE_API_BASE_URL=https://<backend-project>.vercel.app`
-- Optional env: `VITE_API_KEY=<matching backend API key>`
+### Quick summary
 
-After deploying the frontend URL, update backend `CORS_ORIGINS` to include that Vercel URL and redeploy the backend.
+1. Deploy the backend first on Render and copy the public URL.
+2. Deploy the frontend on Vercel with `VITE_API_URL` set to that Render URL.
+3. Update `CORS_ORIGINS` in Render to include your Vercel domain.
 
 ## Verification
 
