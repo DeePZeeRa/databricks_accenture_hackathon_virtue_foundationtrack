@@ -17,7 +17,6 @@
 [![FAISS](https://img.shields.io/badge/FAISS-Offline_RAG-blueviolet?style=flat-square)](https://faiss.ai)
 [![Llama](https://img.shields.io/badge/Llama--3_70B-via_Databricks-ff6b35?style=flat-square)](https://llama.meta.com)
 [![MLflow](https://img.shields.io/badge/MLflow-Traceability-0194E2?style=flat-square)](https://mlflow.org)
-[![Redis](https://img.shields.io/badge/Redis_/_Upstash-Cache-DC382D?style=flat-square)](https://upstash.com)
 [![Vercel](https://img.shields.io/badge/Vercel-Deployed-000000?style=flat-square&logo=vercel)](https://vercel.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
