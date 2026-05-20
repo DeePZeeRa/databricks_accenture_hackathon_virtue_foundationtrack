@@ -125,6 +125,9 @@ def create_app() -> FastAPI:
     # Request ID + Timing middleware
     @app.middleware("http")
     async def request_middleware(request: Request, call_next):
+        # For CORS preflight, skip all logic and just call next
+        if request.method == "OPTIONS":
+            return await call_next(request)
         request_id = str(uuid.uuid4())[:8]
         request.state.request_id = request_id
         start = time.monotonic()
