@@ -1,9 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react()],
+  base: '/',
   build: {
+    outDir: '../backend/static',
+    emptyOutDir: true,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -14,10 +17,11 @@ export default defineConfig({
       },
     },
   },
-  server: {
+  server: command === 'serve' ? {
     proxy: {
       '/api': { target: 'http://localhost:8000', changeOrigin: true },
       '/health': { target: 'http://localhost:8000', changeOrigin: true },
     },
-  },
-})
+  } : {},
+}))
+

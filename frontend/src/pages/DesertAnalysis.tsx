@@ -277,7 +277,7 @@ export default function DesertAnalysis() {
   const filteredScores = scores
     .filter(s => !desertFilter || s.mds_label === desertFilter)
     .filter(s => (s.medical_desert_score??0) >= minScore)
-    .filter(s => gapFilter===0 || (8-(s.critical_specialties_covered??0)) >= gapFilter)
+    .filter(s => gapFilter===0 || (s.critical_specialty_gap_count??0) >= gapFilter)
     .filter(s => !searchQuery || (s.region??'').toLowerCase().includes(searchQuery.toLowerCase()))
     .sort((a,b) => {
       if (sortBy==='score_desc') return (b.medical_desert_score??0)-(a.medical_desert_score??0)
@@ -311,10 +311,10 @@ export default function DesertAnalysis() {
 
   const radarData = selected ? [
     { subject:'Density',        value:(1-((selected as any).density_component||0))*100 },
-    { subject:'Specialists',    value:(1-((selected as any).specialist_component||0))*100 },
-    { subject:'Infrastructure', value:(1-((selected as any).infrastructure_component||0))*100 },
-    { subject:'Data Quality',   value:((selected as any).completeness_component||0)*100 },
-    { subject:'Spec. Coverage', value:((selected.critical_specialties_covered||0)/8)*100 },
+    { subject:'Specialists',    value:(1-((selected as any).specialty_component||0))*100 },
+    { subject:'Infrastructure', value:(1-((selected as any).integrity_component||0))*100 },
+    { subject:'Data Quality',   value:((selected as any).confidence_component||0)*100 },
+    { subject:'Spec. Coverage', value:((8-(selected.critical_specialty_gap_count||0))/8)*100 },
   ] : []
 
   const barData = filteredScores.map(d => ({
@@ -325,7 +325,7 @@ export default function DesertAnalysis() {
     label: d.mds_label,
   }))
 
-  const missingSpecialties = toList(selected?.critical_specialties_missing)
+  const missingSpecialties = toList(selected?.missing_critical_specialties)
   const coveredSpecialties = ['Emergency','Surgery','Obstetrics','Pediatrics','ICU','Radiology','Infectious','Mental Health']
     .filter(s => !missingSpecialties.map(m=>humanize(m)).includes(s))
 
@@ -548,7 +548,7 @@ export default function DesertAnalysis() {
                     ['Beds',       selected.total_beds],
                     ['Doctors',    selected.total_doctors],
                     ['Per 100k',   selected.facilities_per_100k?.toFixed(1)],
-                    ['Spec. Cov.', `${selected.critical_specialties_covered??0}/8`],
+                    ['Spec. Cov.', `${8-(selected.critical_specialty_gap_count??0)}/8`],
                   ].map(([label,val])=>(
                     <StatBox key={label as string} label={label as string} value={val??'—'} color={selectedColor}/>
                   ))}
@@ -699,7 +699,7 @@ export default function DesertAnalysis() {
                   ['🛏️','Beds',         selected.total_beds,          '#8B7CF7'],
                   ['👨‍⚕️','Doctors',     selected.total_doctors,       '#FFB600'],
                   ['📍','Per 100k',     selected.facilities_per_100k?.toFixed(1), '#34D399'],
-                  ['🎓','Spec. Cov.',   `${selected.critical_specialties_covered??0}/8`, '#00D4B1'],
+                  ['🎓','Spec. Cov.',   `${8-(selected.critical_specialty_gap_count??0)}/8`, '#00D4B1'],
                 ].map(([icon,label,val,color])=>(
                   <div key={label as string} style={{
                     textAlign:'center',padding:'12px 8px',borderRadius:10,
@@ -860,9 +860,9 @@ export default function DesertAnalysis() {
                         <td style={{color:'var(--text-secondary)'}}>{s.facilities_per_100k?.toFixed(1)??'—'}</td>
                         <td>
                           <div style={{display:'flex',alignItems:'center',gap:6}}>
-                            <span style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:12,color:'var(--text-primary)'}}>{s.critical_specialties_covered??0}/8</span>
+                            <span style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:12,color:'var(--text-primary)'}}>{8-(s.critical_specialty_gap_count??0)}/8</span>
                             <div className="score-bar" style={{width:40}}>
-                              <div className="score-bar-fill" style={{width:`${((s.critical_specialties_covered||0)/8)*100}%`,background:'#00D4B1'}}/>
+                              <div className="score-bar-fill" style={{width:`${((8-(s.critical_specialty_gap_count||0))/8)*100}%`,background:'#00D4B1'}}/>
                             </div>
                           </div>
                         </td>

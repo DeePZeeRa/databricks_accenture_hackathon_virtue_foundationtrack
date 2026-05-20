@@ -392,7 +392,7 @@ class SQLQueryService:
         if cached:
             return cached
         rows = await DatabricksQueryExecutor.execute(
-            f"SELECT DISTINCT region_normalised FROM {CATALOG}.gold_facilities_enriched WHERE region_normalised IS NOT NULL ORDER BY region_normalised"
+            f"SELECT DISTINCT region_normalised FROM {CATALOG}.gold_idp_enriched WHERE region_normalised IS NOT NULL ORDER BY region_normalised"
         )
         regions = [r["region_normalised"] for r in rows if r.get("region_normalised")]
         await CacheService.set(cache_key, regions, ttl=3600)
@@ -410,11 +410,31 @@ class SQLQueryService:
             return cached
 
         rows = await DatabricksQueryExecutor.execute(
-            f"SELECT * FROM {CATALOG}.gold_medical_desert_scores ORDER BY medical_desert_score DESC",
+            f"""SELECT region, schema_version, scored_at,
+                total_facilities, hospital_count, clinic_count, ngo_count,
+                volunteer_facilities, teaching_hospitals, referral_centers,
+                public_facilities, private_facilities,
+                total_doctors, total_beds,
+                doctors_per_100k, beds_per_100k, facilities_per_100k, hospitals_per_100k,
+                region_population,
+                emergency_medicine_facilities, surgery_facilities, obstetrics_facilities,
+                icu_facilities, pediatrics_facilities, infectious_disease_facilities,
+                radiology_facilities, mental_health_facilities,
+                critical_specialty_gap_count, missing_critical_specialties, all_specialties,
+                emergency_gap_score, icu_gap_score, surgical_access_gap_score, maternity_gap_score,
+                avg_completeness, avg_geo_quality, avg_ghost_probability, avg_quality_risk,
+                total_region_anomalies, rag_ready_count, rag_ready_rate,
+                density_component, specialty_component, integrity_component, confidence_component,
+                summary_mds, blended_mds,
+                medical_desert_score, desert_label, mds_label,
+                score_confidence, score_rationale,
+                centroid_lat, centroid_lon, recommended_actions, method_version
+            FROM {CATALOG}.gold_medical_desert_scores
+            ORDER BY medical_desert_score DESC""",
             max_rows=50,
         )
         for row in rows:
-            for col in ["critical_specialties_missing", "covered_specialty_names", "recommended_actions"]:
+            for col in ["missing_critical_specialties", "all_specialties", "recommended_actions"]:
                 row[col] = _parse_json_col(row.get(col))
 
         await CacheService.set(cache_key, rows, ttl=600)
@@ -433,21 +453,38 @@ class SQLQueryService:
 
         rows = await DatabricksQueryExecutor.execute(
             f"""SELECT region_normalised, total_facilities, clinical_facility_count,
-                hospital_count, clinic_count, ngo_count, avg_doctors, total_doctors,
-                total_beds, avg_bed_capacity, emergency_medicine_facilities,
-                obstetrics_facilities, surgery_facilities, pediatrics_facilities,
-                icu_facilities, infectious_disease_facilities, radiology_facilities,
-                mental_health_facilities, missing_critical_specialties,
-                critical_specialty_gap_count, recommended_actions,
-                medical_desert_score, desert_label,
+                hospital_count, clinical_hospital_count, clinic_count,
+                public_facilities, private_facilities,
+                ngo_count, faith_based_count, government_facilities,
+                teaching_hospital_count, referral_center_count, specialist_hospital_count,
+                avg_doctors, total_doctors, avg_bed_capacity, total_beds,
+                avg_completeness, avg_geo_quality, avg_clinical_complexity,
+                avg_evidence_weight, avg_ghost_probability,
+                emergency_medicine_facilities, obstetrics_facilities,
+                surgery_facilities, pediatrics_facilities, icu_facilities,
+                infectious_disease_facilities, radiology_facilities, mental_health_facilities,
+                facilities_with_procedures, facilities_with_equipment,
+                facilities_with_capabilities, volunteer_facilities,
                 region_centroid_lat, region_centroid_lon,
-                rag_ready_count, total_region_anomalies, volunteer_facilities
+                total_region_anomalies,
+                avg_quality_risk, avg_facility_desert_score, avg_emergency_readiness,
+                avg_critical_care_score, avg_service_richness_score,
+                avg_infrastructure_completeness_score, avg_referral_complexity_score,
+                avg_healthcare_maturity_score,
+                rag_ready_count, rag_ready_rate, clinical_ready_count,
+                region_population, facilities_per_100k, hospitals_per_100k,
+                beds_per_100k, doctors_per_100k, icu_facilities_per_100k,
+                surgery_facilities_per_100k, maternity_facilities_per_100k,
+                public_private_ratio, maternity_gap_score, emergency_gap_score,
+                icu_gap_score, surgical_access_gap_score, public_private_imbalance_score,
+                all_specialties, missing_critical_specialties, critical_specialty_gap_count,
+                recommended_actions, medical_desert_score, desert_label
             FROM {CATALOG}.gold_regional_summary
             ORDER BY medical_desert_score DESC NULLS LAST""",
             max_rows=50,
         )
         for row in rows:
-            for col in ["missing_critical_specialties", "recommended_actions"]:
+            for col in ["missing_critical_specialties", "recommended_actions", "all_specialties"]:
                 row[col] = _parse_json_col(row.get(col))
 
         await CacheService.set(cache_key, rows, ttl=600)
@@ -535,37 +572,50 @@ class SQLQueryService:
         rows = await DatabricksQueryExecutor.execute(
             f"""SELECT unique_id, name, city_clean, region_normalised,
                 facility_type_clean, facility_tier_label, service_maturity_label,
-                latitude, longitude,
+                organization_type_clean, latitude, longitude,
+                number_doctors_int, capacity_int,
+                data_completeness_score, capability_confidence, capability_is_valid,
+                has_emergency_medicine, has_surgery, has_icu,
+                has_obstetrics, has_radiology, has_infectious_disease,
+                has_mental_health, has_pediatrics,
+                procedure_count, equipment_count, capability_count, specialty_count,
+                -- Core anomaly scoring
                 total_anomaly_flags, composite_anomaly_score, anomaly_risk_level,
-                ghost_probability_score, ghost_review_priority,
+                -- Ghost & data poverty
+                ghost_probability_score, ghost_review_priority, data_poverty_flag,
+                -- Risk dimensions
                 quality_risk_score, clinical_risk_score, operational_risk_score, integrity_risk_score,
+                -- Continuity
                 continuity_risk_score, continuity_risk_flags, high_continuity_risk,
+                -- Readiness
                 emergency_readiness_score, critical_care_score,
                 service_richness_score, infrastructure_completeness_score,
                 referral_complexity_score, healthcare_maturity_score,
-                data_poverty_flag,
+                -- Peer analysis
+                peer_capability_zscore, peer_outlier_high_cap, peer_outlier_low_equip,
+                quality_flag_taxonomy,
+                -- Stat anomaly flags
+                stat_anomaly_capability_inflation, stat_anomaly_hospital_no_doctors,
+                stat_anomaly_clinic_claims_icu, stat_anomaly_ghost_facility,
+                stat_anomaly_specialty_mismatch, stat_anomaly_procedure_breadth,
+                -- Enhanced ML flags (all confirmed in CSV)
+                enhanced_type_capability_mismatch, enhanced_ghost_hospital,
+                enhanced_procedures_no_equipment, enhanced_low_idp_confidence,
+                enhanced_suspicious_completeness, enhanced_icu_no_infrastructure,
+                enhanced_implausible_doctor_bed_ratio, enhanced_em_without_surgical_support,
+                enhanced_geo_contradiction, enhanced_planning_overconfidence,
+                enhanced_graph_dependency_gap, enhanced_richness_equipment_mismatch,
+                enhanced_maturity_infra_mismatch, enhanced_high_quality_risk,
+                enhanced_peer_capability_outlier,
+                -- LLM outputs
                 llm_priority_action, llm_data_quality_score,
                 llm_confirmed_anomaly_count, llm_anomaly_severity,
                 llm_clinical_assessment, llm_false_positive_reason,
                 llm_recommended_quality_category,
-                stat_anomaly_capability_inflation, stat_anomaly_hospital_no_doctors,
-                stat_anomaly_clinic_claims_icu, stat_anomaly_ghost_facility,
-                stat_anomaly_procedure_breadth, stat_anomaly_specialty_mismatch,
-                enhanced_procedures_no_equipment, enhanced_ghost_hospital,
-                enhanced_type_capability_mismatch, enhanced_low_idp_confidence,
-                enhanced_suspicious_completeness, enhanced_icu_no_infrastructure,
-                enhanced_implausible_doctor_bed_ratio, enhanced_em_without_surgical_support,
-                enhanced_high_quality_risk, enhanced_peer_capability_outlier,
-                enhanced_maturity_infra_mismatch, enhanced_graph_dependency_gap,
-                enhanced_richness_equipment_mismatch,
-                capability_dependency_gaps, capability_graph_summary,
-                peer_capability_zscore, peer_outlier_high_cap, peer_outlier_low_equip,
-                quality_flag_taxonomy,
-                data_completeness_score, capability_confidence, capability_is_valid,
-                medical_desert_score, desert_label,
-                specialties_enriched, capability_enriched, procedure_enriched,
-                capability_anomalies,
-                number_doctors_int, capacity_int
+                -- Enriched lists
+                specialties_enriched, procedure_enriched,
+                equipment_enriched, capability_enriched, capability_anomalies,
+                medical_desert_score, desert_label
             FROM {CATALOG}.gold_anomaly_flags
             {where_clause}
             ORDER BY total_anomaly_flags DESC NULLS LAST, composite_anomaly_score DESC NULLS LAST
@@ -574,12 +624,8 @@ class SQLQueryService:
         )
         for row in rows:
             for col in ["specialties_enriched", "capability_enriched", "procedure_enriched",
-                        "capability_anomalies", "continuity_risk_flags"]:
+                        "equipment_enriched", "capability_anomalies", "continuity_risk_flags"]:
                 row[col] = _parse_json_col(row.get(col))
-            if row.get("capability_graph_summary"):
-                row["capability_graph_summary"] = _parse_json_col(row.get("capability_graph_summary"), {})
-            if row.get("capability_dependency_gaps"):
-                row["capability_dependency_gaps"] = _parse_json_col(row.get("capability_dependency_gaps"))
 
         result = {"total": total, "items": rows}
         await CacheService.set(cache_key, result, ttl=300)
@@ -588,7 +634,7 @@ class SQLQueryService:
         return result
 
     @staticmethod
-    async def get_anomaly_summary(data_source_header: Optional[dict] = None) -> dict:
+    async def get_anomaly_summary(data_source_header: Optional[dict] = None) -> dict:  # noqa: E501
         cache_key = "anomalies:summary"
         cached = await CacheService.get(cache_key)
         if cached:
@@ -694,22 +740,14 @@ class SQLQueryService:
 
         rows = await DatabricksQueryExecutor.execute(
             f"""SELECT
-                region_normalised,
-                facility_count,
-                avg_desert_score,
-                avg_emergency_gap,
-                avg_continuity_fragility,
-                avg_anomaly_density,
-                avg_low_staff_density,
-                avg_low_equipment_density,
-                critical_facility_count,
-                high_risk_facility_count,
-                high_continuity_risk_count,
-                avg_emergency_readiness,
-                avg_data_completeness,
-                regional_priority_score,
-                priority_tier,
-                recommended_interventions
+                region_normalised, facility_count,
+                avg_desert_score, avg_emergency_gap, avg_continuity_fragility,
+                avg_anomaly_density, avg_ghost_density,
+                avg_low_infra_density, avg_low_staff_density,
+                avg_low_equipment_density, avg_low_maturity_density,
+                critical_facility_count, high_risk_facility_count, high_continuity_risk_count,
+                avg_emergency_readiness, avg_data_completeness,
+                regional_priority_score, priority_tier, recommended_interventions
             FROM {CATALOG}.gold_regional_priority
             ORDER BY regional_priority_score DESC NULLS LAST""",
             max_rows=20,
@@ -756,19 +794,48 @@ class SQLQueryService:
     @staticmethod
     async def get_suggested_queries() -> list[str]:
         return [
-            "How many hospitals have surgical capabilities in Ashanti region?",
-            "Which regions are medical deserts with no ICU facilities?",
-            "Find facilities that accept volunteers in Upper East region",
-            "What are the top anomalies detected in Greater Accra?",
+            # Q1.x — Basic Lookups (Must Have)
+            "How many hospitals have cardiology in Ghana?",
+            "How many hospitals in Ashanti have surgical capabilities?",
+            "What services does Korle Bu Teaching Hospital offer?",
+            "Are there any clinics in Tamale that do obstetrics?",
+            "Which region has the most hospitals in Ghana?",
+            # Q2.x — Geospatial (Must Have)
+            "Where is the nearest facility with obstetrics within 50km of Tamale?",
+            "Where are the largest geographic cold spots with no ICU within 100km?",
+            # Q3.x — Validation (Should Have)
+            "Which facilities claiming ICU also list ventilators and cardiac monitors?",
+            "What percent of cataract surgery facilities also list an operating microscope?",
+            "What percent of facilities claiming advanced specialties have permanent vs visiting services?",
+            # Q4.x — Anomaly Detection (Must Have)
+            "Which facilities claim unrealistic numbers of procedures relative to their size?",
+            "Which facilities have high breadth of procedures but minimal equipment?",
             "Which clinics claim ICU but have no documented equipment?",
-            "Where is the nearest facility with obstetrics to Tamale?",
-            "What specialties are missing in the Northern region?",
+            "Where do we see things that should not move together - large bed counts with minimal surgical equipment?",
+            "What correlations exist between facility characteristics like specialty depth and equipment?",
             "How many ghost facilities were detected by the AI agent?",
+            # Q5.x — Service Classification (Could Have)
+            "Which procedures appear to be delivered via itinerant outreach rather than permanent services?",
+            "Which facilities language suggests they refer patients rather than perform the procedure?",
+            # Q6.x — Workforce (Should Have)
+            "Where is the workforce for ophthalmology actually practicing in Ghana?",
+            "How many facilities have evidence of visiting specialists vs permanent staff?",
+            "What areas show evidence of surgical camps or temporary medical missions?",
+            "Where do signals indicate services are tied to named individuals implying fragility?",
+            # Q7.x — Resource Gaps (Must Have)
+            "Which procedures depend on only 1 or 2 facilities in Ghana?",
+            "Where is oversupply of low-complexity procedures vs scarcity of high-complexity ones?",
+            "What areas have high practitioner numbers but insufficient equipment to practice?",
+            # Q8.x — NGO (Must Have / Should Have)
+            "Which regions have multiple NGOs providing overlapping services?",
+            "Which NGOs and faith-based organizations serve rural Volta communities?",
+            "Where are there gaps where no NGO organizations are working despite evident need?",
+            # Planning
+            "Create an action plan for deploying resources to the most underserved regions",
+            "What are the top anomalies detected in Greater Accra?",
+            # Q10.x — Benchmarking (Should Have)
             "Compare hospital density between Greater Accra and Upper West",
-            "Which NGOs serve rural communities in the Volta region?",
             "What is the medical desert score for Savannah region?",
-            "List all facilities with both surgery and ICU capabilities",
-            "Which facilities have data completeness below 40%?",
-            "How many facilities accept volunteer doctors in Ghana?",
-            "What are the most critical healthcare gaps in Bono East?",
+            "Which regions fall into the sweet spot with some infrastructure that could benefit most from intervention?",
         ]
+

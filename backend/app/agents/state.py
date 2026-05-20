@@ -1,4 +1,4 @@
-"""LangGraph AgentState definition."""
+"""LangGraph AgentState definition — covers all 59 MoSCoW question categories."""
 from __future__ import annotations
 
 from typing import Any, Optional
@@ -13,7 +13,7 @@ class AgentState(TypedDict, total=False):
     chat_history: list[dict]
 
     # Routing
-    query_type: str          # sql | rag | geo | anomaly | desert | medical | planning | ngo | general
+    query_type: str          # sql|rag|geo|anomaly|desert|medical|planning|ngo|workforce|resource|validation|general
     sub_agents: list[str]    # ordered list of nodes to invoke
 
     # SQL node
@@ -34,28 +34,44 @@ class AgentState(TypedDict, total=False):
     # Map node
     map_data: dict
 
-    # Anomaly node
+    # Anomaly node (Q4.x)
     anomaly_results: list[dict]
     anomaly_count: int
 
-    # Desert node
+    # Desert node (Q2.3, Q7.5, Q8.3)
     desert_results: list[dict]
     desert_top: list[dict]
+    regional_summary: list[dict]   # from gold_regional_summary (capability breakdown)
 
-    # Medical reasoning node
+    # Medical reasoning node (Q3.4, Q4.3-4.9, Q5.x)
     medical_reasoning: str
 
     # Planning node
     action_plan: str
 
-    # NGO node
+    # NGO node (Q8.x)
     ngo_results: list[dict]
+    ngo_gap_results: list[dict]    # desert regions with no/few NGOs
+
+    # Workforce node (Q6.x)
+    workforce_results: list[dict]
+    workforce_reasoning: str
+
+    # Resource node (Q7.x)
+    resource_results: list[dict]         # procedure scarcity counts
+    resource_single_points: list[dict]   # procedures at ≤2 facilities
+    resource_regional: list[dict]        # regional coverage breakdown
+    resource_reasoning: str
+
+    # Validation node (Q3.x)
+    validation_results: list[dict]       # facilities with equipment mismatches
+    validation_summary: list[dict]       # aggregate stats
+    validation_reasoning: str
 
     # Web search node
     use_web_search: bool    # controlled by frontend toggle
     web_results: list[dict]
     web_search_query: str
-
 
     # Synthesiser
     answer: str

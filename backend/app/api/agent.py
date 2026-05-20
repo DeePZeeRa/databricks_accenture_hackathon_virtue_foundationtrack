@@ -452,7 +452,9 @@ async def agent_health():
     # created during startup.  If initialization failed, this would be `None`.
     # `graph_nodes: 10 if VIRTUE_AGENT else 0` — reports the number of nodes
     # in the LangGraph workflow when the agent is ready, or 0 if not.
+    from app.agents.graph import _ALL_NODES
+    node_count = len(_ALL_NODES) if VIRTUE_AGENT else 0
     return {
         "agent_ready": VIRTUE_AGENT is not None,
-        "graph_nodes": 10 if VIRTUE_AGENT else 0,
+        "graph_nodes": node_count,
     }

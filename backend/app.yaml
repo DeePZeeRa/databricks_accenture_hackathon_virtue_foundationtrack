@@ -1,0 +1,66 @@
+# Databricks App configuration for Virtue Foundation Ghana Healthcare Intelligence
+# FastAPI backend that also serves the React frontend from backend/static/
+#
+# Deploy via:
+#   databricks apps deploy virtue-foundation-idp --source-code-path /Workspace/Users/<user>/apps/virtue-foundation
+#
+command:
+  - "uvicorn"
+  - "app.main:app"
+  - "--host"
+  - "0.0.0.0"
+  - "--port"
+  - "8000"
+  - "--workers"
+  - "2"
+
+env:
+  # ── Databricks connection (auto-injected by App runtime, override if needed)
+  - name: DATABRICKS_HOST
+    value: "https://dbc-147ceb0b-b41d.cloud.databricks.com"
+
+  - name: DATABRICKS_SQL_WAREHOUSE_ID
+    valueFrom: sql-warehouse
+
+  # ── LLM & Embedding endpoints
+  - name: LLM_ENDPOINT
+    valueFrom: llm-serving-endpoint
+
+  - name: EMBED_ENDPOINT
+    valueFrom: embed-serving-endpoint
+
+  # ── Catalog & Schema
+  - name: DATABRICKS_CATALOG
+    value: "virtue_foundation"
+
+  - name: DATABRICKS_SCHEMA
+    value: "ghana"
+
+  # ── LLM model name (fallback when LLM_ENDPOINT not set)
+  - name: LLM_MODEL
+    value: "databricks-meta-llama-3-3-70b-instruct"
+
+  # ── Security
+  - name: SECRET_KEY
+    valueFrom: app-secret-key
+
+  # ── CORS — allow same origin (frontend served from same app)
+  - name: CORS_ORIGINS
+    value: "*"
+
+  # ── Production mode (disables /docs, enables JSON logging)
+  - name: ENVIRONMENT
+    value: "production"
+
+  - name: LOG_LEVEL
+    value: "INFO"
+
+  # ── Rate limiting
+  - name: RATE_LIMIT_PER_MINUTE
+    value: "30"
+
+  # ── Optional Redis cache (leave blank to use in-memory)
+  # - name: UPSTASH_REDIS_REST_URL
+  #   valueFrom: redis-url
+  # - name: UPSTASH_REDIS_REST_TOKEN
+  #   valueFrom: redis-token

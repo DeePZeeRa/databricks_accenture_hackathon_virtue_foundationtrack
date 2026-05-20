@@ -158,24 +158,42 @@ class FAISSIndexManager:
         try:
             import httpx
 
-            payload = {"dataframe_records": [{"text": query}]}
             headers = {
                 "Authorization": f"Bearer {settings.databricks_token}",
                 "Content-Type": "application/json",
             }
+
+            # Try OpenAI-compatible format first (databricks-bge-large-en uses this)
+            payload = {"input": [query]}
             with httpx.Client(timeout=30) as client:
                 resp = client.post(settings.embed_endpoint, json=payload, headers=headers)
+
+                if resp.status_code == 400:
+                    # Fallback: MLflow dataframe_records format (older endpoints)
+                    logger.debug("embed_openai_format_failed", status=resp.status_code,
+                                 hint="Trying MLflow dataframe_records format")
+                    payload2 = {"dataframe_records": [{"input": query}]}
+                    resp = client.post(settings.embed_endpoint, json=payload2, headers=headers)
+                    if resp.status_code == 400:
+                        # Last try: old "text" field name
+                        payload3 = {"dataframe_records": [{"text": query}]}
+                        resp = client.post(settings.embed_endpoint, json=payload3, headers=headers)
+
                 resp.raise_for_status()
                 data = resp.json()
 
-            # Handle different response formats
-            predictions = data.get("predictions", data.get("outputs", []))
-            if isinstance(predictions, list) and len(predictions) > 0:
-                embedding = predictions[0]
-                if isinstance(embedding, dict):
-                    embedding = embedding.get("embedding", list(embedding.values())[0])
+            # Handle OpenAI format: {"data": [{"embedding": [...]}]}
+            if "data" in data and isinstance(data["data"], list):
+                embedding = data["data"][0].get("embedding", [])
             else:
-                embedding = predictions
+                # Handle MLflow format: {"predictions": [...]} or {"outputs": [...]}
+                predictions = data.get("predictions", data.get("outputs", []))
+                if isinstance(predictions, list) and len(predictions) > 0:
+                    embedding = predictions[0]
+                    if isinstance(embedding, dict):
+                        embedding = embedding.get("embedding", list(embedding.values())[0])
+                else:
+                    embedding = predictions
 
             vec = np.array(embedding, dtype=np.float32).reshape(1, -1)
             _faiss.normalize_L2(vec)
@@ -183,6 +201,50 @@ class FAISSIndexManager:
         except Exception as e:
             logger.error("embed_query_failed", error=str(e), query=query[:100])
             return None
+
+
+    @classmethod
+    def _normalize_meta(cls, meta: dict) -> dict:
+        """Normalize metadata to use consistent keys regardless of schema version.
+        New schema uses 'region', 'city', 'doctors', 'capacity';
+        old schema used 'region_normalised', 'city_clean', 'number_doctors_int', 'capacity_int'.
+        We keep BOTH so any code referencing either key still works.
+        """
+        out = dict(meta)
+        # region
+        if "region" in meta and "region_normalised" not in meta:
+            out["region_normalised"] = meta["region"]
+        if "region_normalised" in meta and "region" not in meta:
+            out["region"] = meta["region_normalised"]
+        # city
+        if "city" in meta and "city_clean" not in meta:
+            out["city_clean"] = meta["city"]
+        if "city_clean" in meta and "city" not in meta:
+            out["city"] = meta["city_clean"]
+        # doctors
+        if "doctors" in meta and "number_doctors_int" not in meta:
+            out["number_doctors_int"] = meta["doctors"]
+        if "number_doctors_int" in meta and "doctors" not in meta:
+            out["doctors"] = meta["number_doctors_int"]
+        # capacity
+        if "capacity" in meta and "capacity_int" not in meta:
+            out["capacity_int"] = meta["capacity"]
+        if "capacity_int" in meta and "capacity" not in meta:
+            out["capacity"] = meta["capacity_int"]
+        # specialties
+        if "specialties" in meta and "specialties_enriched" not in meta:
+            out["specialties_enriched"] = meta["specialties"]
+        if "procedures" in meta and "procedure_enriched" not in meta:
+            out["procedure_enriched"] = meta["procedures"]
+        if "equipment" in meta and "equipment_enriched" not in meta:
+            out["equipment_enriched"] = meta["equipment"]
+        # facility_type_clean
+        if "facility_type" in meta and "facility_type_clean" not in meta:
+            out["facility_type_clean"] = meta["facility_type"]
+        # volunteers
+        if "accepts_volunteers" in meta and "accepts_volunteers_bool" not in meta:
+            out["accepts_volunteers_bool"] = meta["accepts_volunteers"]
+        return out
 
     @classmethod
     def search(
@@ -210,7 +272,6 @@ class FAISSIndexManager:
         if vec is None:
             return []
 
-
         candidates = min(k * 12, cls._index.ntotal)
         scores, indices = cls._index.search(vec, candidates)
 
@@ -218,20 +279,27 @@ class FAISSIndexManager:
         for score, idx in zip(scores[0], indices[0]):
             if idx < 0 or idx >= len(cls._metadata):
                 continue
-            meta = cls._metadata[idx]
+            raw_meta = cls._metadata[idx]
+            meta = cls._normalize_meta(raw_meta)  # normalize key names
             doc = cls._documents[idx] if idx < len(cls._documents) else ""
 
-            # Apply filters
-            if filter_region and filter_region.lower() not in str(meta.get("region_normalised", "")).lower():
-                continue
-            if filter_type and filter_type.lower() not in str(meta.get("facility_type_clean", "")).lower():
-                continue
+            # Apply filters — check both old and new key names for region/type
+            if filter_region:
+                region_val = str(meta.get("region_normalised", meta.get("region", ""))).lower()
+                if filter_region.lower() not in region_val:
+                    continue
+            if filter_type:
+                type_val = str(meta.get("facility_type_clean", meta.get("facility_type", ""))).lower()
+                if filter_type.lower() not in type_val:
+                    continue
             if filter_specialty:
                 spec_key = f"has_{filter_specialty.lower().replace(' ', '_')}"
                 if not meta.get(spec_key, False):
                     continue
-            if filter_volunteer is True and not meta.get("accepts_volunteers_bool", False):
-                continue
+            if filter_volunteer is True:
+                vol = meta.get("accepts_volunteers_bool", meta.get("accepts_volunteers", False))
+                if not vol:
+                    continue
             if filter_desert and filter_desert.lower() not in str(meta.get("desert_label", "")).lower():
                 continue
             if min_completeness and (meta.get("data_completeness_score", 0) or 0) < min_completeness:
@@ -243,7 +311,7 @@ class FAISSIndexManager:
                 "metadata": meta,
                 "citations": meta.get("idp_citations", []),
                 "facility_name": meta.get("name", ""),
-                "region": meta.get("region_normalised", ""),
+                "region": meta.get("region_normalised", meta.get("region", "")),
                 "unique_id": meta.get("unique_id", ""),
             })
 

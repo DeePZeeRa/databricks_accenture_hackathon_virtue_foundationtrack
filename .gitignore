@@ -35,3 +35,4 @@ graphify_run/
 scripts
 .vscode
 AGENT.md
+DEPLOYMENT_CHECKLIST.md

@@ -90,12 +90,27 @@ export interface FacilityDetail extends Facility {
 export interface RegionalSummary {
   region_normalised: string
   total_facilities: number
+  clinical_facility_count?: number
   hospital_count: number
+  clinical_hospital_count?: number
   clinic_count?: number
+  public_facilities?: number
+  private_facilities?: number
   ngo_count: number
+  faith_based_count?: number
+  government_facilities?: number
+  teaching_hospital_count?: number
+  referral_center_count?: number
+  specialist_hospital_count?: number
   avg_doctors?: number
   total_doctors: number
+  avg_bed_capacity?: number
   total_beds: number
+  avg_completeness?: number
+  avg_geo_quality?: number
+  avg_clinical_complexity?: number
+  avg_evidence_weight?: number
+  avg_ghost_probability?: number
   emergency_medicine_facilities?: number
   obstetrics_facilities?: number
   surgery_facilities?: number
@@ -104,41 +119,98 @@ export interface RegionalSummary {
   infectious_disease_facilities?: number
   radiology_facilities?: number
   mental_health_facilities?: number
+  facilities_with_procedures?: number
+  facilities_with_equipment?: number
+  facilities_with_capabilities?: number
+  volunteer_facilities?: number
+  region_centroid_lat?: number
+  region_centroid_lon?: number
+  total_region_anomalies?: number
+  avg_quality_risk?: number
+  avg_facility_desert_score?: number
+  avg_emergency_readiness?: number
+  avg_critical_care_score?: number
+  avg_service_richness_score?: number
+  avg_infrastructure_completeness_score?: number
+  avg_referral_complexity_score?: number
+  avg_healthcare_maturity_score?: number
+  rag_ready_count?: number
+  rag_ready_rate?: number
+  clinical_ready_count?: number
+  region_population?: number
+  facilities_per_100k?: number
+  hospitals_per_100k?: number
+  beds_per_100k?: number
+  doctors_per_100k?: number
+  icu_facilities_per_100k?: number
+  surgery_facilities_per_100k?: number
+  maternity_facilities_per_100k?: number
+  public_private_ratio?: number
+  maternity_gap_score?: number
+  emergency_gap_score?: number
+  icu_gap_score?: number
+  surgical_access_gap_score?: number
+  public_private_imbalance_score?: number
+  all_specialties?: string[]
   missing_critical_specialties?: string[]
   critical_specialty_gap_count?: number
   recommended_actions?: string[]
   medical_desert_score?: number
   desert_label?: string
-  region_centroid_lat?: number
-  region_centroid_lon?: number
-  rag_ready_count?: number
-  total_region_anomalies?: number
-  volunteer_facilities?: number
 }
 
 export interface DesertScore {
   region: string
+  schema_version?: string
+  scored_at?: string
   total_facilities: number
   hospital_count: number
+  clinic_count?: number
   ngo_count?: number
-  total_beds: number
+  volunteer_facilities?: number
+  teaching_hospitals?: number
+  referral_centers?: number
+  public_facilities?: number
+  private_facilities?: number
   total_doctors: number
-  population_estimate?: number
+  total_beds: number
+  doctors_per_100k?: number
+  beds_per_100k?: number
   facilities_per_100k?: number
-  beds_per_10k?: number
-  doctors_per_10k?: number
-  critical_specialties_covered: number
-  critical_specialties_missing?: string[]
+  hospitals_per_100k?: number
+  region_population?: number
+  emergency_medicine_facilities?: number
+  surgery_facilities?: number
+  obstetrics_facilities?: number
+  icu_facilities?: number
+  pediatrics_facilities?: number
+  critical_specialty_gap_count?: number
+  missing_critical_specialties?: string[]
+  all_specialties?: string[]
+  emergency_gap_score?: number
+  icu_gap_score?: number
+  surgical_access_gap_score?: number
+  maternity_gap_score?: number
+  avg_completeness?: number
+  avg_geo_quality?: number
+  avg_ghost_probability?: number
+  avg_quality_risk?: number
+  total_region_anomalies?: number
   density_component?: number
-  specialist_component?: number
-  infrastructure_component?: number
-  completeness_component?: number
+  specialty_component?: number
+  integrity_component?: number
+  confidence_component?: number
+  summary_mds?: number
+  blended_mds?: number
   medical_desert_score: number
+  desert_label?: string
   mds_label: string
+  score_confidence?: number
+  score_rationale?: string
   centroid_lat?: number
   centroid_lon?: number
   recommended_actions?: string[]
-  avg_data_completeness?: number
+  method_version?: string
 }
 
 export interface AnomalyRecord {
@@ -149,6 +221,7 @@ export interface AnomalyRecord {
   facility_type_clean?: string
   facility_tier_label?: string
   service_maturity_label?: string
+  organization_type_clean?: string
   latitude?: number
   longitude?: number
   number_doctors_int?: number
@@ -177,6 +250,12 @@ export interface AnomalyRecord {
   infrastructure_completeness_score?: number
   referral_complexity_score?: number
   healthcare_maturity_score?: number
+  // Peer analysis
+  peer_capability_zscore?: number
+  peer_procedure_zscore?: number
+  peer_outlier_high_cap?: boolean
+  peer_outlier_low_equip?: boolean
+  quality_flag_taxonomy?: string
   // LLM outputs
   llm_priority_action?: string
   llm_data_quality_score?: number
@@ -192,7 +271,7 @@ export interface AnomalyRecord {
   stat_anomaly_ghost_facility?: boolean
   stat_anomaly_procedure_breadth?: boolean
   stat_anomaly_specialty_mismatch?: boolean
-  // Enhanced ML anomaly flags
+  // Enhanced ML anomaly flags (all confirmed in gold_anomaly_flags CSV)
   enhanced_type_capability_mismatch?: boolean
   enhanced_ghost_hospital?: boolean
   enhanced_procedures_no_equipment?: boolean
@@ -201,28 +280,24 @@ export interface AnomalyRecord {
   enhanced_icu_no_infrastructure?: boolean
   enhanced_implausible_doctor_bed_ratio?: boolean
   enhanced_em_without_surgical_support?: boolean
-  enhanced_high_quality_risk?: boolean
-  enhanced_peer_capability_outlier?: boolean
-  enhanced_maturity_infra_mismatch?: boolean
+  enhanced_geo_contradiction?: boolean
+  enhanced_planning_overconfidence?: boolean
   enhanced_graph_dependency_gap?: boolean
   enhanced_richness_equipment_mismatch?: boolean
-  // Peer / graph analysis
-  capability_dependency_gaps?: string[]
-  capability_graph_summary?: Record<string, unknown>
-  peer_capability_zscore?: number
-  peer_outlier_high_cap?: boolean
-  peer_outlier_low_equip?: boolean
-  quality_flag_taxonomy?: string
+  enhanced_maturity_infra_mismatch?: boolean
+  enhanced_high_quality_risk?: boolean
+  enhanced_peer_capability_outlier?: boolean
   // Data quality
   data_completeness_score?: number
   capability_confidence?: number
   capability_is_valid?: boolean
   medical_desert_score?: number
   desert_label?: string
-  // Enriched lists (for problems/actions view)
+  // Enriched lists
   specialties_enriched?: string[]
   capability_enriched?: string[]
   procedure_enriched?: string[]
+  equipment_enriched?: string[]
   capability_anomalies?: string[]
 }
 
@@ -242,6 +317,7 @@ export interface StreamingChunk {
   chunk_type: 'thinking' | 'sql_result' | 'rag_result' | 'geo_result' |
   'anomaly_result' | 'desert_result' | 'medical_reasoning' |
   'planning' | 'ngo_result' | 'web_result' |
+  'workforce_result' | 'validation_result' | 'resource_result' |
   'final_answer' | 'citations' | 'done' | 'error'
   content: string
   metadata?: Record<string, unknown>

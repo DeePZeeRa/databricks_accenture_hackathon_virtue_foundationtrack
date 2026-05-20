@@ -806,7 +806,7 @@ export default function Dashboard() {
                 <tbody>
                   {sortedCritical.map((d, idx) => {
                     const col  = DESERT_COLORS[d.mds_label] || '#f0f4ff'
-                    const gaps = 5 - (d.critical_specialties_covered || 0)
+                    const gaps = d.critical_specialty_gap_count ?? 0
                     return (
                       <tr key={d.region}>
                         <td>
