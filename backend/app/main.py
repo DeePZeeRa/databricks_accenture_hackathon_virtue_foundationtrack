@@ -90,6 +90,14 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    # Debug middleware to log all incoming request headers (for CORS troubleshooting)
+    def add_debug_header_logger(app):
+        @app.middleware("http")
+        async def log_headers_middleware(request: Request, call_next):
+            logger.info("request_headers", path=request.url.path, method=request.method, headers=dict(request.headers))
+            return await call_next(request)
+        return app
+
     from app.core.config import settings
 
     app = FastAPI(
@@ -112,6 +120,7 @@ def create_app() -> FastAPI:
     )
 
     app.add_middleware(GZipMiddleware, minimum_size=1000)
+    add_debug_header_logger(app)
 
     # Request ID + Timing middleware
     @app.middleware("http")
